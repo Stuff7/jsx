@@ -63,53 +63,7 @@ pub fn parse<I: Iterator<Item = PathBuf>>(paths: I) -> Result<(), Error> {
   Ok(())
 }
 
-const Q_PROPS: &str = r#"(
-  (call_expression
-   function: (identifier) @_func
-   arguments:
-     (arguments
-       (_)
-       (object
-         (pair
-           key: (_) @key
-           value: [
-             (identifier)
-             (member_expression)
-             (subscript_expression)
-             (template_string)
-             (unary_expression)
-             (binary_expression)
-             (parenthesized_expression)
-           ] @value
-         )
-       )
-     )
-  )
-
-  (#eq? @_func "jsx")
-)"#;
-
-const Q_CHILDREN: &str = r#"(
-  (call_expression
-   function: (identifier) @_func
-   arguments:
-     (arguments
-       (_)
-       (_)
-       [
-         (identifier)
-         (member_expression)
-         (subscript_expression)
-         (template_string)
-         (unary_expression)
-         (binary_expression)
-         (parenthesized_expression)
-       ]* @param
-     )
-  )
-
-  (#eq? @_func "jsx")
-)"#;
+const Q_PROPS: &str = include_str!("../queries/jsx_props.scm");
 
 #[derive(Debug)]
 pub enum Error {
