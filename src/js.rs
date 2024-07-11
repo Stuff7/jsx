@@ -1,7 +1,7 @@
 use std::{
   fmt::{Debug, Display},
   fs::{self},
-  io::{self, Read},
+  io::{self, Read, Seek, Write},
   path::PathBuf,
 };
 use tree_sitter::{LanguageError, Parser, Query, QueryCapture, QueryCursor, QueryError};
@@ -57,7 +57,8 @@ pub fn parse<I: Iterator<Item = PathBuf>>(paths: I) -> Result<(), Error> {
       if last_idx < source.len() {
         outbuf.extend_from_slice(&source[last_idx..]);
       }
-      println!("\x1b[38;5;228m{path:?}\x1b[0m\n{}\n", std::str::from_utf8(&outbuf)?);
+      file.seek(io::SeekFrom::Start(0))?;
+      file.write_all(&outbuf)?;
     }
     outbuf.clear();
     source.clear();
