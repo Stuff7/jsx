@@ -18,8 +18,8 @@ pub fn parse<I: Iterator<Item = PathBuf>>(paths: I) -> Result<(), Error> {
 
   let mut cursor = QueryCursor::new();
 
-  let mut source = Vec::with_capacity(1_000_000);
-  let mut outbuf = Vec::with_capacity(1_000_000);
+  let mut source = Vec::new();
+  let mut outbuf = Vec::new();
 
   for path in paths {
     let mut file = fs::OpenOptions::new().read(true).write(true).open(&path)?;
@@ -76,6 +76,7 @@ fn find_capture_names<'a>(captures: &'a [QueryCapture<'a>]) -> CaptureNames<'a> 
   const KEY_IDX: u32 = 1;
   const VAL_IDX: u32 = 2;
   const PARAM_IDX: u32 = 3;
+
   let mut key = None;
   let mut value = None;
   let mut param = None;
