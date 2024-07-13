@@ -1,14 +1,25 @@
+mod dir;
+mod error;
+
 use std::{
-  fmt::{Debug, Display},
+  fmt::Debug,
   fs::{self},
   io::{self, Read, Seek, Write},
   path::PathBuf,
 };
-use tree_sitter::{LanguageError, Parser, Query, QueryCapture, QueryCursor, QueryError};
+use tree_sitter::{Parser, Query, QueryCapture, QueryCursor};
+
+fn main() -> Result<(), error::AppError> {
+  let path = std::env::args().nth(1).ok_or(error::AppError::MissingDir)?;
+  let paths = dir::RecursiveDirIterator::new(path)?.filter(|p| p.extension().is_some_and(|n| n == "js"));
+  parse(paths)?;
+
+  Ok(())
+}
 
 const Q_PROPS: &str = include_str!("../queries/jsx_props.scm");
 
-pub fn parse<I: Iterator<Item = PathBuf>>(paths: I) -> Result<(), Error> {
+pub fn parse<I: Iterator<Item = PathBuf>>(paths: I) -> Result<(), error::ParserError> {
   let javascript = tree_sitter_javascript::language();
   let mut parser = Parser::new();
 
@@ -25,7 +36,7 @@ pub fn parse<I: Iterator<Item = PathBuf>>(paths: I) -> Result<(), Error> {
     let mut file = fs::OpenOptions::new().read(true).write(true).open(&path)?;
 
     file.read_to_end(&mut source)?;
-    let tree = parser.parse(&source, None).ok_or(Error::Parse)?;
+    let tree = parser.parse(&source, None).ok_or(error::ParserError::Parse)?;
     let root = tree.root_node();
     let matches = cursor.matches(&query, root, source.as_slice());
     let mut last_idx = 0;
@@ -94,57 +105,5 @@ fn find_capture_names<'a>(captures: &'a [QueryCapture<'a>]) -> CaptureNames<'a> 
   CaptureNames {
     obj: key.and_then(|k| value.map(|v| (k, v))),
     param,
-  }
-}
-
-pub enum Error {
-  Io(io::Error),
-  Language(LanguageError),
-  Query(QueryError),
-  Utf8(std::str::Utf8Error),
-  Parse,
-}
-
-impl std::error::Error for Error {}
-
-impl Display for Error {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    match self {
-      Self::Io(err) => write!(f, "{}", err),
-      Self::Language(err) => write!(f, "{}", err),
-      Self::Query(err) => write!(f, "{}", err),
-      Self::Utf8(err) => write!(f, "{}", err),
-      Self::Parse => write!(f, "Failed to parse"),
-    }
-  }
-}
-
-impl Debug for Error {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    write!(f, "{self}")
-  }
-}
-
-impl From<LanguageError> for Error {
-  fn from(value: LanguageError) -> Self {
-    Self::Language(value)
-  }
-}
-
-impl From<QueryError> for Error {
-  fn from(value: QueryError) -> Self {
-    Self::Query(value)
-  }
-}
-
-impl From<io::Error> for Error {
-  fn from(value: io::Error) -> Self {
-    Self::Io(value)
-  }
-}
-
-impl From<std::str::Utf8Error> for Error {
-  fn from(value: std::str::Utf8Error) -> Self {
-    Self::Utf8(value)
   }
 }

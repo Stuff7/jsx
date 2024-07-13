@@ -1,0 +1,30 @@
+{
+  "name": "jsx",
+  "version": "1.0",
+  "description": "Transpile jsx factory generated code to be more reactive",
+  "main": "src/script.js",
+  "type": "module",
+  "author": "Armando",
+  "license": "MIT",
+  "files": [
+    "target/release/jsx",
+    "dist/"
+  ],
+  "bin": {
+    "jsx": "target/release/jsx"
+  },
+  "scripts": {
+    "clean": "rm -rf dist/*",
+    "build:jsx": "esbuild js/*.ts js/components/*.tsx --sourcemap --jsx=automatic --outdir=dist --outbase=js",
+    "build:tsc": "npm run clean && npm run build:jsx && tsc",
+    "build": "npm run build:tsc && target/release/jsx dist && target/release/ts_imports dist"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.13.0",
+    "@typescript-eslint/parser": "^7.13.0",
+    "csstype": "^3.1.3",
+    "esbuild": "^0.21.5",
+    "eslint": "^8.57.0",
+    "typescript": "^5.4.5"
+  }
+}
