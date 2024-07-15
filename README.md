@@ -6,31 +6,31 @@ JSX is a lightweight library that harnesses TypeScript's `jsxFactory` compiler o
 
 1. **Build binaries required to build the project**
 
-   ```shell
+   ```console
    cargo build --release
    ```
 
 2. **Install npm dependencies**
 
-   ```shell
+   ```console
    npm install
    ```
 
 3. **Build the project**
 
-   ```shell
+   ```console
    npm run build
    ```
 
 4. **Pack it**
 
-   ```shell
+   ```console
    npm run pack
    ```
 
 ## Install
 
-   ```shell
+   ```console
    npm install path/to/dist/jsx-x.x.x.tgz
    ```
 
@@ -87,7 +87,7 @@ JSX is a lightweight library that harnesses TypeScript's `jsxFactory` compiler o
 
    Use any bundler that supports transforming JSX similarly to TypeScript's `tsc` output. For example, using `esbuild`:
 
-   ```shell
+   ```console
    esbuild index.tsx --bundle --sourcemap --jsx=automatic --outdir=sample
    ```
 
@@ -95,6 +95,6 @@ JSX is a lightweight library that harnesses TypeScript's `jsxFactory` compiler o
 
    Finally, execute `jsx` on the directory containing your built files, this step is necessary for the reactive system to work correctly.
 
-   ```shell
+   ```console
    jsx sample
    ```
