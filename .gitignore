@@ -1,6 +1,7 @@
 /target
 /logs
 /dist
+/sample
 
 /pkg
 /node_modules

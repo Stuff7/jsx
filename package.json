@@ -36,6 +36,7 @@
     "clean": "rm -rf dist/*",
     "build:jsx": "esbuild js/*.ts js/components/*.tsx --sourcemap --tree-shaking=false --format=esm --jsx=automatic --outdir=dist",
     "build": "npm run clean && npm run build:jsx && target/release/jsx dist && target/release/ts_imports dist",
+    "sample": "esbuild js/sample/index.tsx --bundle --sourcemap --jsx=automatic --outdir=sample && target/release/jsx sample",
     "pack": "npm pack --pack-destination dist"
   },
   "devDependencies": {
