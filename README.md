@@ -6,33 +6,33 @@ JSX is a lightweight library that harnesses TypeScript's `jsxFactory` compiler o
 
 1. **Build binaries required to build the project**
 
-```sh
-cargo build --release
-```
+   ```sh
+   cargo build --release
+   ```
 
 2. **Install npm dependencies**
 
-  ```sh
-  npm install
-  ```
+   ```sh
+   npm install
+   ```
 
 3. **Build the project**
 
-  ```sh
-  npm run build
-  ```
+   ```sh
+   npm run build
+   ```
 
 4. **Pack it**
 
-  ```sh
-  npm run pack
-  ```
+   ```sh
+   npm run pack
+   ```
 
 ## Install
 
-  ```sh
-  npm install path/to/dist/jsx-x.x.x.tgz
-  ```
+   ```sh
+   npm install path/to/dist/jsx-x.x.x.tgz
+   ```
 
 ## Usage
 
