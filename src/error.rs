@@ -7,29 +7,12 @@ use std::{
   str::Utf8Error,
 };
 
-macro_rules! display_error {
-  ($name: ident) => {
-    impl Debug for $name {
-      fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{self}")
-      }
-    }
-  };
-}
-
-#[derive(thiserror::Error)]
-pub enum AppError {
-  #[error(transparent)]
-  Io(#[from] io::Error),
-  #[error(transparent)]
-  Parser(#[from] ParserError),
-  #[error("Missing directory path")]
-  MissingDir,
-}
-display_error!(AppError);
-
 #[derive(thiserror::Error)]
 pub enum ParserError {
+  #[error("Failed to parse")]
+  Parse,
+  #[error("Missing directory path")]
+  MissingDir,
   #[error(transparent)]
   Io(#[from] io::Error),
   #[error(transparent)]
@@ -40,7 +23,10 @@ pub enum ParserError {
   Utf8(#[from] Utf8Error),
   #[error(transparent)]
   StripPrefix(#[from] StripPrefixError),
-  #[error("Failed to parse")]
-  Parse,
 }
-display_error!(ParserError);
+
+impl Debug for ParserError {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "{self}")
+  }
+}

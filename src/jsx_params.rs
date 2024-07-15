@@ -1,6 +1,7 @@
 mod dir;
 mod error;
 
+use error::ParserError;
 use std::{
   fmt::Debug,
   fs::{self},
@@ -9,8 +10,8 @@ use std::{
 };
 use tree_sitter::{Parser, Query, QueryCapture, QueryCursor};
 
-fn main() -> Result<(), error::AppError> {
-  let path = std::env::args().nth(1).ok_or(error::AppError::MissingDir)?;
+fn main() -> Result<(), ParserError> {
+  let path = std::env::args().nth(1).ok_or(ParserError::MissingDir)?;
   let paths = dir::RecursiveDirIterator::new(path)?.filter(|p| p.extension().is_some_and(|n| n == "js"));
   parse(paths)?;
 
@@ -19,7 +20,7 @@ fn main() -> Result<(), error::AppError> {
 
 const Q_PROPS: &str = include_str!("../queries/jsx_props.scm");
 
-pub fn parse<I: Iterator<Item = PathBuf>>(paths: I) -> Result<(), error::ParserError> {
+pub fn parse<I: Iterator<Item = PathBuf>>(paths: I) -> Result<(), ParserError> {
   let javascript = tree_sitter_javascript::language();
   let mut parser = Parser::new();
 
@@ -36,7 +37,7 @@ pub fn parse<I: Iterator<Item = PathBuf>>(paths: I) -> Result<(), error::ParserE
     let mut file = fs::OpenOptions::new().read(true).write(true).open(&path)?;
 
     file.read_to_end(&mut source)?;
-    let tree = parser.parse(&source, None).ok_or(error::ParserError::Parse)?;
+    let tree = parser.parse(&source, None).ok_or(ParserError::Parse)?;
     let root = tree.root_node();
     let matches = cursor.matches(&query, root, source.as_slice());
     let mut last_idx = 0;

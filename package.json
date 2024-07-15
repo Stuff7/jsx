@@ -1,23 +1,42 @@
 {
   "name": "jsx",
-  "version": "1.0",
+  "version": "1.0.0",
   "description": "Transpile jsx factory generated code to be more reactive",
-  "main": "src/script.js",
+  "main": "dist/jsx.js",
+  "types": "dist/global.d.ts",
   "type": "module",
   "author": "Armando",
   "license": "MIT",
   "files": [
     "target/release/jsx",
-    "dist/"
+    "dist/*",
+    "tsconfig.lib.json",
+    "js/*"
   ],
+  "exports": {
+    ".": {
+      "types": "./dist/types/jsx.ts",
+      "default": "./dist/jsx.js"
+    },
+    "./components/*": {
+      "types": "./dist/types/components/*.tsx",
+      "default": "./dist/components/*.js"
+    },
+    "./tsconfig.json": {
+      "default": "./tsconfig.lib.json"
+    },
+    "./global": {
+      "types": "./dist/global.d.ts"
+    }
+  },
   "bin": {
     "jsx": "target/release/jsx"
   },
   "scripts": {
     "clean": "rm -rf dist/*",
-    "build:jsx": "esbuild js/*.ts js/components/*.tsx --sourcemap --jsx=automatic --outdir=dist --outbase=js",
-    "build:tsc": "npm run clean && npm run build:jsx && tsc",
-    "build": "npm run build:tsc && target/release/jsx dist && target/release/ts_imports dist"
+    "build:jsx": "esbuild js/*.ts js/components/*.tsx --sourcemap --tree-shaking=false --format=esm --jsx=automatic --outdir=dist",
+    "build": "npm run clean && npm run build:jsx && target/release/jsx dist && target/release/ts_imports dist",
+    "pack": "npm pack --pack-destination dist"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.13.0",
