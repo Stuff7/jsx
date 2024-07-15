@@ -2,6 +2,38 @@
 
 JSX is a lightweight library that harnesses TypeScript's `jsxFactory` compiler option to enhance reactivity in TypeScript applications. It extends the default TypeScript compiler output, enabling props as getters and transforming children into functions to create dynamic and responsive elements.
 
+## Build
+
+1. **Build binaries required to build the project**
+
+```sh
+cargo build --release
+```
+
+2. **Install npm dependencies**
+
+```sh
+npm install
+```
+
+3. **Build the project**
+
+```sh
+npm run build
+```
+
+4. **Pack it**
+
+```sh
+npm run pack
+```
+
+## Install
+
+```sh
+npm install path/to/dist/jsx-x.x.x.tgz
+```
+
 ## Usage
 
 1. **Configure TypeScript Compiler**
