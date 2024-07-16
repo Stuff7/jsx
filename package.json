@@ -10,8 +10,7 @@
   "files": [
     "target/release/jsx",
     "dist/*",
-    "tsconfig.lib.json",
-    "js/*"
+    "tsconfig.lib.json"
   ],
   "exports": {
     ".": {

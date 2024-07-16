@@ -145,7 +145,7 @@ interface FieldsetHTMLAttributes<T> extends HTMLAttributes<T> {
 }
 
 interface FormHTMLAttributes<T> extends HTMLAttributes<T> {
-  ["accept-charset"]?: string | undefined;
+  "accept-charset"?: string | undefined;
   action?:
   | string
   | undefined
@@ -392,7 +392,7 @@ interface MediaHTMLAttributes<T> extends HTMLAttributes<T> {
 interface MetaHTMLAttributes<T> extends HTMLAttributes<T> {
   charset?: string | undefined;
   content?: string | undefined;
-  ["http-equiv"]?: string | undefined;
+  "http-equiv"?: string | undefined;
   media?: string | undefined;
   name?: string | undefined;
 }
@@ -902,7 +902,7 @@ interface SVGAttributes<T> extends AriaAttributes, DOMAttributes<T> {
   "accent-height"?: number | string | undefined;
   accumulate?: "none" | "sum" | undefined;
   additive?: "replace" | "sum" | undefined;
-  ["alignment-baseline"]?:
+  "alignment-baseline"?:
   | "auto"
   | "baseline"
   | "before-edge"
