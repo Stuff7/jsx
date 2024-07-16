@@ -1,0 +1,49 @@
+name: Build and pack JSX
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Build binaries
+      run: cargo build --release
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 21
+
+    - name: NPM Build
+      run: |
+        npm install
+        npm run build
+        npm run pack
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.run_id }}
+        release_name: jsx-${{ github.run_id }}
+        draft: false
+        prerelease: false
+
+    - name: Upload package to releases
+      id: upload_package
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./dist/jsx-1.0.0.tgz
+        asset_name: jsx-1.0.0.tgz
+        asset_content_type: application/gzip
