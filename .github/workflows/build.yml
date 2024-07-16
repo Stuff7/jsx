@@ -26,12 +26,24 @@ jobs:
         npm run build
         npm run pack
 
-    - name: Upload package to release
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.run_id }}
+        release_name: jsx-${{ github.run_id }}
+        draft: false
+        prerelease: false
+
+    - name: Upload package to releases
+      id: upload_package
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: https://uploads.github.com/repos/${{ github.repository }}/releases/${{ github.event.release.id }}/assets
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ./dist/jsx-1.0.0.tgz
         asset_name: jsx-1.0.0.tgz
         asset_content_type: application/gzip
