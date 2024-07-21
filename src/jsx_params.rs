@@ -87,8 +87,8 @@ struct CaptureNames<'a> {
 
 fn find_capture_names<'a>(captures: &'a [QueryCapture<'a>]) -> CaptureNames<'a> {
   const KEY_IDX: u32 = 1;
-  const VAL_IDX: u32 = 2;
-  const PARAM_IDX: u32 = 3;
+  const VAL_IDX: u32 = 3;
+  const PARAM_IDX: u32 = 4;
 
   let mut key = None;
   let mut value = None;

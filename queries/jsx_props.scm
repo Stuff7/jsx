@@ -18,6 +18,10 @@
                (unary_expression)
                (binary_expression)
                (parenthesized_expression)
+               (call_expression
+                 function: (_) @_call_expr
+                 (#not-eq? @_call_expr "jsx")
+               )
              ] @value
            )
          )
@@ -35,6 +39,10 @@
            (unary_expression)
            (binary_expression)
            (parenthesized_expression)
+           (call_expression
+             function: (_) @_call_expr
+             (#not-eq? @_call_expr "jsx")
+           )
          ] @param
        )
      ]
