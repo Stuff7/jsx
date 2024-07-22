@@ -14,7 +14,9 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Build binaries
-      run: cargo build --release
+      run: |
+        rustup update
+        cargo build --release
 
     - uses: actions/setup-node@v4
       with:
