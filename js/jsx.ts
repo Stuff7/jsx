@@ -7,6 +7,7 @@ export default function jsx<T extends JSX.Tag>(
   attributes: { [key: string]: unknown; } | null,
   ...children: Node[]
 ) {
+  "use JSX";
   if (typeof tag === "function") {
     return tag(attributes ?? {}, ...children);
   }

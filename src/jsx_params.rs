@@ -6,7 +6,7 @@ use std::{
   fmt::Debug,
   fs::{self},
   io::{self, Read, Seek, Write},
-  path::PathBuf,
+  path::{Path, PathBuf},
 };
 use tree_sitter::{Parser, Query, QueryCapture, QueryCursor};
 
@@ -26,12 +26,24 @@ pub fn parse<I: Iterator<Item = PathBuf>>(paths: I) -> Result<(), ParserError> {
 
   parser.set_language(&javascript)?;
 
-  let query = Query::new(&javascript, Q_PROPS)?;
-
-  let mut cursor = QueryCursor::new();
-
   let mut source = Vec::new();
   let mut outbuf = Vec::new();
+
+  let paths: Box<[_]> = paths.collect();
+  let jsx_ident = find_jsx_ident(&mut source, paths.iter())?;
+
+  let q_src = if let Some(jsx_ident) = jsx_ident {
+    &Q_PROPS.replace("jsx", jsx_ident)
+  }
+  else {
+    Q_PROPS
+  };
+
+  source.clear();
+
+  let query = Query::new(&javascript, q_src)?;
+
+  let mut cursor = QueryCursor::new();
 
   for path in paths {
     let mut file = fs::OpenOptions::new().read(true).write(true).open(&path)?;
@@ -52,7 +64,7 @@ pub fn parse<I: Iterator<Item = PathBuf>>(paths: I) -> Result<(), ParserError> {
         let key_txt = key.node.utf8_text(&source)?;
         let val_txt = val.node.utf8_text(&source)?;
         let (sbo, sbc) = if key.node.kind() == "string" { ("[", "]") } else { ("", "") };
-        outbuf.extend_from_slice(format!("get {sbo}{key_txt}{sbc}() {{ return {val_txt} }}").as_bytes());
+        outbuf.extend_from_slice(format!("get {sbo}{key_txt}{sbc}(){{return {val_txt}}}").as_bytes());
       }
 
       if let Some(param) = captures.param {
@@ -61,7 +73,7 @@ pub fn parse<I: Iterator<Item = PathBuf>>(paths: I) -> Result<(), ParserError> {
         last_idx = range.end_byte;
 
         let txt = param.node.utf8_text(&source)?;
-        outbuf.extend_from_slice(format!("function() {{ return {txt} }}").as_bytes());
+        outbuf.extend_from_slice(format!("function(){{return {txt}}}").as_bytes());
       }
     }
 
@@ -77,6 +89,38 @@ pub fn parse<I: Iterator<Item = PathBuf>>(paths: I) -> Result<(), ParserError> {
   }
 
   Ok(())
+}
+
+const Q_JSX_IDENT: &str = include_str!("../queries/jsx_ident.scm");
+
+#[allow(clippy::needless_borrows_for_generic_args)]
+pub fn find_jsx_ident<P: AsRef<Path>, I: Iterator<Item = P>>(source: &mut Vec<u8>, paths: I) -> Result<Option<&str>, ParserError> {
+  let javascript = tree_sitter_javascript::language();
+  let mut parser = Parser::new();
+
+  parser.set_language(&javascript)?;
+
+  let query = Query::new(&javascript, Q_JSX_IDENT)?;
+
+  let mut cursor = QueryCursor::new();
+  const JSX_IDENT_IDX: u32 = 0;
+
+  for path in paths {
+    let mut file = fs::OpenOptions::new().read(true).open(&path)?;
+
+    file.read_to_end(source)?;
+    let tree = parser.parse(&source, None).ok_or(ParserError::Parse)?;
+    let root = tree.root_node();
+    let matches = cursor.matches(&query, root, source.as_slice());
+
+    if let Some(ident) = matches.flat_map(|m| m.captures).find(|c| c.index == JSX_IDENT_IDX) {
+      return Ok(Some(ident.node.utf8_text(source)?));
+    }
+
+    source.clear();
+  }
+
+  Ok(None)
 }
 
 #[derive(Debug)]
