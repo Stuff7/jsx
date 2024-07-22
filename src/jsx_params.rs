@@ -34,8 +34,7 @@ pub fn parse<I: Iterator<Item = PathBuf>>(paths: I) -> Result<(), ParserError> {
 
   let q_src = if let Some(jsx_ident) = jsx_ident {
     &Q_PROPS.replace("jsx", jsx_ident)
-  }
-  else {
+  } else {
     Q_PROPS
   };
 
@@ -45,8 +44,8 @@ pub fn parse<I: Iterator<Item = PathBuf>>(paths: I) -> Result<(), ParserError> {
 
   let mut cursor = QueryCursor::new();
 
-  for path in paths {
-    let mut file = fs::OpenOptions::new().read(true).write(true).open(&path)?;
+  for path in paths.iter() {
+    let mut file = fs::OpenOptions::new().read(true).write(true).open(path)?;
 
     file.read_to_end(&mut source)?;
     let tree = parser.parse(&source, None).ok_or(ParserError::Parse)?;
