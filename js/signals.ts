@@ -19,13 +19,21 @@ export type BoolAttr = boolean | "true" | "false";
 
 export type ReactiveAttr = Ref<string> | Ref<boolean> | string | boolean;
 
+function hookListeners<T>(data: Reactive<T>) {
+  Object.defineProperty(data, "listeners", {
+    value: new Set(),
+    enumerable: false,
+  });
+}
+
 export function ref<T>(value: T): Ref<T> {
-  const p: Ref<T> = { value, listeners: new Set as Ref<T>["listeners"] };
+  const p = { value } as Ref<T>;
+  hookListeners(p);
   return new Proxy<Ref<T>>(p, { get, set });
 }
 
 export function reactive<T extends object>(props: T): Reactive<T> {
-  (props as Reactive<T>).listeners = new Set();
+  hookListeners(props as Reactive<T>);
   return new Proxy<Reactive<T>>(props as Reactive<T>, { get, set });
 }
 
