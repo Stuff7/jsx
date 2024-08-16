@@ -23,6 +23,7 @@ function hookListeners<T>(data: Reactive<T>) {
   Object.defineProperty(data, "listeners", {
     value: new Set(),
     enumerable: false,
+    configurable: true,
   });
 }
 
