@@ -14,7 +14,7 @@ export default function For<T extends object>(props: ForProps<T>): JSX.Element {
   const anchor = document.createComment("For");
 
   let isRangeSet = false;
-  let oldList = [...props.each];
+  const oldList = [...props.each];
 
   queueMicrotask(() => {
     if (!anchor.isConnected) {
@@ -43,7 +43,7 @@ export default function For<T extends object>(props: ForProps<T>): JSX.Element {
     const data = reactive(val);
     const node = props.do(data, idx);
 
-    watch(() => props.each[idx.value] = val, [data]);
+    setTimeout(() => watch(() => props.each[idx.value] = val, [data]));
 
     if (node instanceof Array) { return { idx, elems: node } }
     return { idx, elems: [node] };
@@ -89,9 +89,11 @@ export default function For<T extends object>(props: ForProps<T>): JSX.Element {
       const [node, oldIdx] = findNode(idx, val as T);
 
       if (idx === oldIdx) { return }
+      const item = props.each[idx];
 
       if (idx === nodes.length) {
         nodes.push(node);
+        oldList.push(item);
         reverseForEach(node.elems, node => range.insertNode(node));
       }
       else if (idx > nodes.length) {
@@ -100,15 +102,18 @@ export default function For<T extends object>(props: ForProps<T>): JSX.Element {
       else {
         const currNode = nodes[idx].elems;
 
-        currNode.forEach(n => {
-          n.replaceWith(...node.elems);
-        });
-
         if (oldIdx !== -1) {
+          swapNodes(currNode, node.elems);
           swap(nodes, idx, oldIdx);
+          swap(oldList, idx, oldIdx);
+          nodes[oldIdx].idx.value = oldIdx;
         }
         else {
+          currNode.forEach(n => {
+            n.replaceWith(...node.elems);
+          });
           nodes[idx] = node;
+          oldList[idx] = item;
         }
         nodes[idx].idx.value = idx;
       }
@@ -124,7 +129,15 @@ export default function For<T extends object>(props: ForProps<T>): JSX.Element {
     range.setStartAfter(node);
   }, [props.each]);
 
-  watch(() => oldList = [...props.each]);
-
   return anchor as unknown as JSX.Element;
+}
+
+function swapNodes(a: HTMLElement[], b: HTMLElement[]) {
+  const temp = b.map(n => {
+    const temp = document.createComment("");
+    n.replaceWith(temp);
+    return temp;
+  });
+  a.forEach(n => n.replaceWith(...b));
+  temp.forEach(n => n.replaceWith(...a));
 }
