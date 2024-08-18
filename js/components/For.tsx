@@ -1,4 +1,4 @@
-import { Reactive, Ref, reactive, ref, watch } from "~/signals";
+import { Reactive, Ref, reactive, ref, watch, watchOnly } from "~/signals";
 import { reverseForEach, swap } from "~/utils";
 
 type ForProps<T extends object> = {
@@ -8,6 +8,14 @@ type ForProps<T extends object> = {
 
 type ReactiveNode = { idx: Ref<number>, elems: HTMLElement[] };
 
+/**
+ * A component that renders a list of JSX elements from a reactive dynamically-sized array.
+ * Elements are keyed by reference, meaning nodes will only be re-created when the actual
+ * object in the array changes.
+ *
+ * @note Use `<FixedFor>` if you need to render a fixed-size array, as this component is
+ * optimized for dynamic arrays that can change in size.
+ */
 export default function For<T extends object>(props: ForProps<T>): JSX.Element {
   const range = document.createRange();
   const nodes = props.each.map(createNode);
@@ -56,7 +64,7 @@ export default function For<T extends object>(props: ForProps<T>): JSX.Element {
     return [createNode(props.each[idx], idx), oldIdx];
   }
 
-  watch((key, val) => {
+  watchOnly([props.each], (key, val) => {
     if (!key) { return }
 
     if (!isRangeSet) {
@@ -127,7 +135,7 @@ export default function For<T extends object>(props: ForProps<T>): JSX.Element {
     if (!document.contains(node)) { return }
 
     range.setStartAfter(node);
-  }, [props.each]);
+  });
 
   return anchor as unknown as JSX.Element;
 }

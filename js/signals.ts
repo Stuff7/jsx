@@ -59,6 +59,34 @@ export function watch<T>(fn: Running<T>["execute"], deps: Reactive<unknown>[] = 
   execute("" as keyof T, "" as T[keyof T]);
 }
 
+/**
+ * Works like `watch` but it only subscribes to the specified dependencies (deps)
+ * and ignores any other accesses from within the callback (fn).
+ * */
+export function watchOnly<T>(deps: Reactive<unknown>[], fn: Running<T>["execute"]) {
+  const execute: Running<T>["execute"] = (key, value) => {
+    cleanup(running);
+
+    deps.forEach(dep => {
+      subscribe(running, dep.listeners);
+    });
+
+    try {
+      fn(key, value);
+    }
+    finally {
+      context.pop();
+    }
+  };
+
+  const running: Running<T> = {
+    execute,
+    dependencies: new Set(),
+  };
+
+  execute("" as keyof T, "" as T[keyof T]);
+}
+
 export function computed<T>(fn: () => T) {
   const c = ref(fn());
   watch(() => c.value = fn());
