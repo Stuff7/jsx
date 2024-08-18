@@ -119,3 +119,15 @@ function cleanup<T>(running: Running<T>) {
   }
   running.dependencies.clear();
 }
+
+export function isReactive(value: unknown): value is Reactive<object> {
+  return value instanceof Object && "listeners" in value && value.listeners instanceof Set;
+}
+
+export function isRef(value: unknown): value is Ref<unknown> {
+  return isReactive(value) && "value" in value;
+}
+
+export function isBoolAttribute(value: unknown): value is BoolAttr {
+  return typeof value === "string" || typeof value === "boolean";
+}

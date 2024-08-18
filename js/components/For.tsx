@@ -1,5 +1,5 @@
-import { Reactive, Ref, reactive, ref, watch, watchOnly } from "~/signals";
-import { reverseForEach, swap } from "~/utils";
+import { Reactive, Ref, reactive, ref, watchOnly, isReactive } from "~/signals";
+import { reverseForEach, swap, arrLast } from "~/utils";
 
 type ForProps<T extends object> = {
   each: Reactive<T[]>,
@@ -18,11 +18,14 @@ type ReactiveNode = { idx: Ref<number>, elems: HTMLElement[] };
  */
 export default function For<T extends object>(props: ForProps<T>): JSX.Element {
   const range = document.createRange();
-  const nodes = props.each.map(createNode);
   const anchor = document.createComment("For");
 
   let isRangeSet = false;
-  const oldList = [...props.each];
+  const oldList = props.each.map((item, i): [T, ReactiveNode] => {
+    const data = reactive(item);
+    props.each[i] = data;
+    return [data, createNode(data, i)];
+  });
 
   queueMicrotask(() => {
     if (!anchor.isConnected) {
@@ -32,7 +35,7 @@ export default function For<T extends object>(props: ForProps<T>): JSX.Element {
 
     if (isRangeSet) { return }
 
-    const mounted = nodes.map(n => n.elems).flat();
+    const mounted = oldList.map(([_, n]) => n.elems).flat();
 
     if (mounted.length) {
       anchor.replaceWith(...mounted);
@@ -47,19 +50,21 @@ export default function For<T extends object>(props: ForProps<T>): JSX.Element {
   });
 
   function createNode(val: T, i: number): ReactiveNode {
+    const isValReactive = isReactive(val);
     const idx = ref(i);
-    const data = reactive(val);
+    const data = isValReactive ? val : reactive(val);
+    if (!isValReactive) {
+      props.each[idx.value] = data;
+    }
     const node = props.do(data, idx);
-
-    setTimeout(() => watch(() => props.each[idx.value] = val, [data]));
 
     if (node instanceof Array) { return { idx, elems: node } }
     return { idx, elems: [node] };
   }
 
   function findNode(idx: number, val: T): [ReactiveNode, number] {
-    const oldIdx = oldList.indexOf(val);
-    if (oldIdx !== -1) { return [nodes[oldIdx], oldIdx] }
+    const oldIdx = oldList.findIndex(([v]) => v === val);
+    if (oldIdx !== -1) { return [oldList[oldIdx][1], oldIdx] }
 
     return [createNode(props.each[idx], idx), oldIdx];
   }
@@ -74,20 +79,20 @@ export default function For<T extends object>(props: ForProps<T>): JSX.Element {
     if (key === "length") {
       if (typeof val !== "number") { return }
 
-      if (val >= nodes.length) { return }
+      if (val >= oldList.length) { return }
 
       if (val === 0) {
         isRangeSet = true;
-        nodes[0].elems[0].replaceWith(anchor);
+        oldList[0][1].elems[0].replaceWith(anchor);
         range.setStartAfter(anchor);
         anchor.remove();
       }
 
-      for (let i = nodes.length - 1; i >= val; i--) {
-        nodes[i].elems.forEach(node => node.remove());
+      for (let i = oldList.length - 1; i >= val; i--) {
+        oldList[i][1].elems.forEach(node => node.remove());
       }
 
-      nodes.length = val;
+      oldList.length = val;
     }
     else {
       const idx = Number(key);
@@ -99,37 +104,52 @@ export default function For<T extends object>(props: ForProps<T>): JSX.Element {
       if (idx === oldIdx) { return }
       const item = props.each[idx];
 
-      if (idx === nodes.length) {
-        nodes.push(node);
-        oldList.push(item);
+      if (idx === oldList.length) {
+        const j = oldList.findIndex(([_, n]) => n === node);
+
+        if (j !== -1) {
+          oldList[j][1] = {
+            idx: ref(j),
+            elems: node.elems.map(n => {
+              const tmp = document.createElement("slot");
+              tmp.innerText = "tmp";
+              n.replaceWith(tmp);
+              return tmp;
+            }),
+          };
+          oldList[j][0] = { ...oldList[j][0] };
+          range.setStartAfter(arrLast(oldList[j][1].elems));
+        }
+
+        oldList.push([item, node]);
+
         reverseForEach(node.elems, node => range.insertNode(node));
+        oldList[idx][1].idx.value = idx;
       }
-      else if (idx > nodes.length) {
-        throw new Error(`<For> Index "${idx}" is out of bounds for children length "${nodes.length}"`);
+      else if (idx > oldList.length) {
+        throw new Error(`<For> Index "${idx}" is out of bounds for children length "${oldList.length}"`);
       }
       else {
-        const currNode = nodes[idx].elems;
+        const currNode = oldList[idx][1].elems;
 
         if (oldIdx !== -1) {
           swapNodes(currNode, node.elems);
-          swap(nodes, idx, oldIdx);
           swap(oldList, idx, oldIdx);
-          nodes[oldIdx].idx.value = oldIdx;
+          oldList[oldIdx][1].idx.value = oldIdx;
         }
         else {
           currNode.forEach(n => {
             n.replaceWith(...node.elems);
           });
-          nodes[idx] = node;
-          oldList[idx] = item;
+          oldList[idx] = [item, node];
         }
-        nodes[idx].idx.value = idx;
+        oldList[idx][1].idx.value = idx;
       }
     }
 
-    if (!nodes.length) { return }
+    if (!oldList.length) { return }
 
-    let node: HTMLElement | HTMLElement[] = nodes[nodes.length - 1].elems;
+    let node: HTMLElement | HTMLElement[] = oldList[oldList.length - 1][1].elems;
     node = node[node.length - 1];
 
     if (!document.contains(node)) { return }

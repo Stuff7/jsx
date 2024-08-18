@@ -15,7 +15,11 @@ module.exports = {
   rules: {
     "@typescript-eslint/no-unused-vars": [
       "warn",
-      { "varsIgnorePattern": "jsx|Fragment|^_", "caughtErrorsIgnorePattern": "jsx" },
+      {
+        "varsIgnorePattern": "jsx|Fragment|^_",
+        "destructuredArrayIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "jsx",
+      },
     ],
     "arrow-spacing": ["warn", { "before": true, "after": true }],
     "indent": ["warn", 2, { "SwitchCase": 1 }],

@@ -1,4 +1,4 @@
-import { BoolAttr, Reactive, Ref, watch } from "~/signals";
+import { isRef, isBoolAttribute, watch } from "~/signals";
 
 export * from "~/signals";
 
@@ -121,18 +121,6 @@ function setClass(element: HTMLElement, map: Record<string, unknown>, propK: str
       element.classList.add(classN);
     }
   });
-}
-
-function isReactive(value: unknown): value is Reactive<object> {
-  return value instanceof Object && "listeners" in value && value.listeners instanceof Set;
-}
-
-function isRef(value: unknown): value is Ref<unknown> {
-  return isReactive(value) && "value" in value;
-}
-
-function isBoolAttribute(value: unknown): value is BoolAttr {
-  return typeof value === "string" || typeof value === "boolean";
 }
 
 function setAttribute(
