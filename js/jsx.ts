@@ -2,6 +2,13 @@ import { isRef, isBoolAttribute, watch } from "~/signals";
 
 export * from "~/signals";
 
+const components = [] as Component[];
+
+type Component = {
+  ref: JSX.Component,
+  slots: Record<string, HTMLElement>,
+};
+
 export default function jsx<T extends JSX.Tag>(
   tag: T | JSX.Component,
   attributes: { [key: string]: unknown; } | null,
@@ -9,11 +16,32 @@ export default function jsx<T extends JSX.Tag>(
 ) {
   "use JSX";
   if (typeof tag === "function") {
-    return tag(attributes ?? {}, ...children);
+    const slots = {} as Component["slots"];
+    for (const c of children) {
+      if (c instanceof HTMLElement && c.slot) {
+        slots[c.slot] = c;
+      }
+    }
+
+    components.push({ ref: tag, slots });
+    const ret = tag(attributes ?? {}, ...children);
+    components.pop();
+
+    return ret;
   }
 
   type Tag = typeof tag;
   const element: HTMLElementTagNameMap[Tag] = document.createElement(tag);
+
+  const currentComponent = components[components.length - 1];
+
+  if (currentComponent && element instanceof HTMLSlotElement && typeof attributes?.name === "string") {
+    if (attributes.name in currentComponent.slots) {
+      return currentComponent.slots[attributes.name];
+    }
+
+    return children;
+  }
 
   const map = (attributes ?? {});
   const attrs = element as Record<string, unknown>;
@@ -112,6 +140,9 @@ export default function jsx<T extends JSX.Tag>(
 
       watch(() => {
         if (attributes["$if"]) {
+          if (document.contains(element)) {
+            return;
+          }
           if (prevSibling && prevSibling.parentElement) {
             prevSibling.after(element);
           }
