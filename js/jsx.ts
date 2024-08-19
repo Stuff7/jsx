@@ -6,7 +6,7 @@ const components = [] as Component[];
 
 type Component = {
   ref: JSX.Component,
-  slots: Record<string, HTMLElement>,
+  slots: Record<string, JSX.Element> & { default: JSX.Element[] },
 };
 
 export default function jsx<T extends JSX.Tag>(
@@ -16,10 +16,14 @@ export default function jsx<T extends JSX.Tag>(
 ) {
   "use JSX";
   if (typeof tag === "function") {
-    const slots = {} as Component["slots"];
+    const slots = { default: [] as JSX.Element[] } as Component["slots"];
     for (const c of children) {
+      const elems = (c instanceof HTMLTemplateElement ? [...c.childNodes] : c) as JSX.Element;
       if (c instanceof HTMLElement && c.slot) {
-        slots[c.slot] = c;
+        slots[c.slot] = elems;
+      }
+      else {
+        slots.default.push(...(elems instanceof Array ? elems : [elems]));
       }
     }
 
@@ -35,8 +39,12 @@ export default function jsx<T extends JSX.Tag>(
 
   const currentComponent = components[components.length - 1];
 
-  if (currentComponent && element instanceof HTMLSlotElement && typeof attributes?.name === "string") {
-    if (attributes.name in currentComponent.slots) {
+  if (currentComponent && element instanceof HTMLSlotElement) {
+    if (attributes?.name == null && currentComponent.slots.default) {
+      return currentComponent.slots.default;
+    }
+
+    if (typeof attributes?.name === "string" && attributes.name in currentComponent.slots) {
       return currentComponent.slots[attributes.name];
     }
 

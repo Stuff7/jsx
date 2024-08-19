@@ -113,7 +113,6 @@ export default function For<T extends object>(props: ForProps<T>): JSX.Element {
             idx: ref(j),
             elems: node.elems.map(n => {
               const tmp = document.createElement("slot");
-              tmp.innerText = "tmp";
               n.replaceWith(tmp);
               return tmp;
             }),
