@@ -1,23 +1,23 @@
-import jsx, { Fragment } from "~/jsx";
-import { watch } from "~/signals";
+import { computed, watch } from "~/signals";
 
 type PortalProps = {
-  to?: Element,
+  to?: Element | string,
 };
 
 export default function Portal(props: PortalProps, ...children: HTMLElement[]) {
-  queueMicrotask(() => {
-    watch(() => {
-      children.forEach(n => n.remove());
-
-      if (props.to) {
-        props.to.append(...children);
-      }
-      else {
-        document.body.append(...children);
-      }
-    });
+  const parent = computed(() => {
+    if (!props.to) {
+      return document.body;
+    }
+    if (props.to instanceof Element) {
+      return props.to;
+    }
+    return document.querySelector(props.to) || document.body;
   });
 
-  return <></>;
+  watch(() => {
+    parent.value.append(...children);
+  });
+
+  return [] as unknown as JSX.Element;
 }

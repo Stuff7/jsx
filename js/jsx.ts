@@ -28,7 +28,7 @@ export default function jsx<T extends JSX.Tag>(
     else if (propK === "class") {
       setClass(element, map, propK);
     }
-    else if (!propK.includes(":") && (isBoolAttribute(propV) || typeof propV === "number")) {
+    else if (propK[0] !== "$" && !propK.includes(":") && (isBoolAttribute(propV) || typeof propV === "number")) {
       watch(() => {
         if (typeof attr === "undefined") {
           element.setAttribute(propK, `${map[propK]}`);
@@ -104,6 +104,34 @@ export default function jsx<T extends JSX.Tag>(
     }
   }
 
+  if (typeof attributes?.["$if"] === "boolean") {
+    queueMicrotask(() => {
+      const parent = element.parentElement;
+      const prevSibling = element.previousSibling;
+      const nextSibling = element.nextSibling;
+
+      watch(() => {
+        if (attributes["$if"]) {
+          if (prevSibling && prevSibling.parentElement) {
+            prevSibling.after(element);
+          }
+          else if (nextSibling && nextSibling.parentElement) {
+            nextSibling.before(element);
+          }
+          else if (parent) {
+            parent.append(element);
+          }
+        }
+        else if (document.contains(element)) {
+          element.remove();
+        }
+        else {
+          queueMicrotask(() => element.remove());
+        }
+      });
+    });
+  }
+
   return element;
 }
 
@@ -138,22 +166,24 @@ function setAttribute(
   }
 }
 
-{
-  const MountEvent = new CustomEvent("mount");
-  const UnmountEvent = new CustomEvent("unmount");
+const MountEvent = new CustomEvent("mount");
+const UnmountEvent = new CustomEvent("unmount");
 
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      if (mutation.type !== "childList") { return }
+const mountObserver = new MutationObserver((mutations) => {
+  mutations.forEach((mutation) => {
+    if (mutation.type !== "childList") { return }
 
-      if (mutation.addedNodes.length > 0) {
-        mutation.addedNodes.forEach(m => m.dispatchEvent(MountEvent));
-      }
-      if (mutation.removedNodes.length > 0) {
-        mutation.removedNodes.forEach(m => m.dispatchEvent(UnmountEvent));
-      }
-    });
+    if (mutation.addedNodes.length > 0) {
+      mutation.addedNodes.forEach(m => m.dispatchEvent(MountEvent));
+    }
+    if (mutation.removedNodes.length > 0) {
+      mutation.removedNodes.forEach(m => m.dispatchEvent(UnmountEvent));
+    }
   });
+});
 
-  observer.observe(document.body, { childList: true, subtree: true });
+function observeChildren(parent: Node) {
+  mountObserver.observe(parent, { childList: true, subtree: true });
 }
+
+observeChildren(document.body);

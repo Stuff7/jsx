@@ -9,6 +9,10 @@ type EventName = RemovePrefix<OnEventName, "on">;
 type ExtractEvent<T extends OnEventName> =
   GlobalEventHandlers[T] extends (((this: GlobalEventHandlers, ev: infer K) => any) | null) ? K : never;
 
+type SpecialProps = {
+  "$if"?: boolean,
+};
+
 type EventHandler<T> = {
   [K in `on:${EventName}`]: ((this: T, ev: ExtractEvent<`on${RemovePrefix<K, "on:">}`>) => void) | null;
 };
@@ -869,7 +873,7 @@ type AriaRole =
   | "treeitem"
   | (string & NonNullable<unknown>);
 
-type DOMAttributes<T> = EventHandler<T> & {
+type DOMAttributes<T> = SpecialProps & EventHandler<T> & {
   children?: Node | Node[] | undefined;
   innerHTML?: string;
 };
