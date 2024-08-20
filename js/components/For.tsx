@@ -8,6 +8,45 @@ type ForProps<T extends object> = {
 
 type ReactiveNode = { idx: Ref<number>, elems: HTMLElement[] };
 
+type ElementPosition = {
+  parent: HTMLElement | null,
+  prevSibling: ChildNode | null,
+  nextSibling: ChildNode | null,
+  setFromElement<T extends Node>(element: T): void,
+  isPositioned(): boolean,
+  getInsertFunction(): InsertNodeFn,
+};
+
+type InsertNodeFn = ChildNode["after"];
+
+function createElementPosition(): ElementPosition {
+  return {
+    parent: null,
+    prevSibling: null,
+    nextSibling: null,
+    setFromElement(element) {
+      this.parent = element.parentElement;
+      this.prevSibling = element.previousSibling;
+      this.nextSibling = element.nextSibling;
+    },
+    isPositioned() {
+      return !!(this.parent || this.prevSibling || this.nextSibling);
+    },
+    getInsertFunction() {
+      if (this.prevSibling && this.prevSibling.parentElement) {
+        return this.prevSibling.after.bind(this.prevSibling);
+      }
+      if (this.nextSibling && this.nextSibling.parentElement) {
+        return this.nextSibling.before.bind(this.nextSibling);
+      }
+      if (this.parent) {
+        return this.parent.append.bind(this.parent);
+      }
+      throw new Error("Could not find element position");
+    },
+  };
+}
+
 /**
  * A component that renders a list of JSX elements from a reactive dynamically-sized array.
  * Elements are keyed by reference, meaning nodes will only be re-created when the actual
@@ -17,10 +56,10 @@ type ReactiveNode = { idx: Ref<number>, elems: HTMLElement[] };
  * optimized for dynamic arrays that can change in size.
  */
 export default function For<T extends object>(props: ForProps<T>): JSX.Element {
-  const range = document.createRange();
   const anchor = document.createComment("For");
+  const position = createElementPosition();
 
-  let isRangeSet = false;
+  let isMounted = false;
   let mountList: [T, ReactiveNode][] = [];
 
   queueMicrotask(() => {
@@ -29,7 +68,9 @@ export default function For<T extends object>(props: ForProps<T>): JSX.Element {
       return;
     }
 
-    if (isRangeSet) { return }
+    position.setFromElement(anchor);
+
+    if (isMounted) { return }
 
     mountList = props.each.map((item, i): [T, ReactiveNode] => {
       const data = reactive(item);
@@ -40,14 +81,12 @@ export default function For<T extends object>(props: ForProps<T>): JSX.Element {
 
     if (mounted.length) {
       anchor.replaceWith(...mounted);
-      range.setStartAfter(mounted[mounted.length - 1]);
     }
     else {
-      range.setStartAfter(anchor);
       anchor.remove();
     }
 
-    isRangeSet = true;
+    isMounted = true;
   });
 
   function createNode(val: T, i: number): ReactiveNode {
@@ -73,7 +112,7 @@ export default function For<T extends object>(props: ForProps<T>): JSX.Element {
   watchOnly([props.each], (key, val) => {
     if (!key) { return }
 
-    if (!isRangeSet) {
+    if (!isMounted) {
       return;
     }
 
@@ -81,13 +120,6 @@ export default function For<T extends object>(props: ForProps<T>): JSX.Element {
       if (typeof val !== "number") { return }
 
       if (val >= mountList.length) { return }
-
-      if (val === 0) {
-        isRangeSet = true;
-        mountList[0][1].elems[0].replaceWith(anchor);
-        range.setStartAfter(anchor);
-        anchor.remove();
-      }
 
       for (let i = mountList.length - 1; i >= val; i--) {
         mountList[i][1].elems.forEach(node => node.remove());
@@ -108,6 +140,7 @@ export default function For<T extends object>(props: ForProps<T>): JSX.Element {
       if (idx === mountList.length) {
         const j = mountList.findIndex(([_, n]) => n === node);
 
+        let insertNode: InsertNodeFn;
         if (j !== -1) {
           mountList[j][1] = {
             idx: ref(j),
@@ -118,12 +151,19 @@ export default function For<T extends object>(props: ForProps<T>): JSX.Element {
             }),
           };
           mountList[j][0] = { ...mountList[j][0] };
-          range.setStartAfter(arrLast(mountList[j][1].elems));
+          const mountPoint = arrLast(mountList[j][1].elems);
+          insertNode = mountPoint.after.bind(mountPoint);
+        }
+        else if (mountList.length > 0) {
+          const mountPoint = arrLast(arrLast(mountList)[1].elems);
+          insertNode = mountPoint.after.bind(mountPoint);
+        }
+        else {
+          insertNode = position.getInsertFunction();
         }
 
         mountList.push([item, node]);
-
-        reverseForEach(node.elems, node => range.insertNode(node));
+        reverseForEach(node.elems, (n) => insertNode(n));
         mountList[idx][1].idx.value = idx;
       }
       else if (idx > mountList.length) {
@@ -146,15 +186,6 @@ export default function For<T extends object>(props: ForProps<T>): JSX.Element {
         mountList[idx][1].idx.value = idx;
       }
     }
-
-    if (!mountList.length) { return }
-
-    let node: HTMLElement | HTMLElement[] = mountList[mountList.length - 1][1].elems;
-    node = node[node.length - 1];
-
-    if (!document.contains(node)) { return }
-
-    range.setStartAfter(node);
   });
 
   return anchor as unknown as JSX.Element;

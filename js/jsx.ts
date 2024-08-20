@@ -2,12 +2,7 @@ import { isRef, isBoolAttribute, watch } from "~/signals";
 
 export * from "~/signals";
 
-const components = [] as Component[];
-
-type Component = {
-  ref: JSX.Component,
-  slots: Record<string, JSX.Element> & { default: JSX.Element[] },
-};
+const componentSlots = [] as JSX.Slots[];
 
 export default function jsx<T extends JSX.Tag>(
   tag: T | JSX.Component,
@@ -16,7 +11,9 @@ export default function jsx<T extends JSX.Tag>(
 ) {
   "use JSX";
   if (typeof tag === "function") {
-    const slots = { default: [] as JSX.Element[] } as Component["slots"];
+    if (tag === Fragment as unknown as JSX.Component) { return Fragment(null, ...children) }
+
+    const slots = { default: [] as JSX.Slots["default"] } as JSX.Slots;
     for (const c of children) {
       const elems = (c instanceof HTMLTemplateElement ? [...c.childNodes] : c) as JSX.Element;
       if (c instanceof HTMLElement && c.slot) {
@@ -27,9 +24,9 @@ export default function jsx<T extends JSX.Tag>(
       }
     }
 
-    components.push({ ref: tag, slots });
-    const ret = tag(attributes ?? {}, ...children);
-    components.pop();
+    componentSlots.push(slots);
+    const ret = tag(attributes ?? {}, slots);
+    componentSlots.pop();
 
     return ret;
   }
@@ -37,15 +34,15 @@ export default function jsx<T extends JSX.Tag>(
   type Tag = typeof tag;
   const element: HTMLElementTagNameMap[Tag] = document.createElement(tag);
 
-  const currentComponent = components[components.length - 1];
+  const currentSlots = componentSlots[componentSlots.length - 1];
 
-  if (currentComponent && element instanceof HTMLSlotElement) {
-    if (attributes?.name == null && currentComponent.slots.default) {
-      return currentComponent.slots.default;
+  if (currentSlots && element instanceof HTMLSlotElement) {
+    if (attributes?.name == null && currentSlots.default) {
+      return currentSlots.default;
     }
 
-    if (typeof attributes?.name === "string" && attributes.name in currentComponent.slots) {
-      return currentComponent.slots[attributes.name];
+    if (typeof attributes?.name === "string" && attributes.name in currentSlots) {
+      return currentSlots[attributes.name];
     }
 
     return children;
@@ -54,7 +51,7 @@ export default function jsx<T extends JSX.Tag>(
   const map = (attributes ?? {});
   const attrs = element as Record<string, unknown>;
 
-  for (const propK of (Object.keys(map))) {
+  for (const propK in map) {
     const propV = map[propK] as unknown;
     const attr = attrs[propK];
 

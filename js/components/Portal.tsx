@@ -4,7 +4,7 @@ type PortalProps = {
   to?: Element | string,
 };
 
-export default function Portal(props: PortalProps, ...children: HTMLElement[]) {
+export default function Portal(props: PortalProps, slots: JSX.Slots) {
   const parent = computed(() => {
     if (!props.to) {
       return document.body;
@@ -16,7 +16,7 @@ export default function Portal(props: PortalProps, ...children: HTMLElement[]) {
   });
 
   watch(() => {
-    parent.value.append(...children);
+    parent.value.append(...slots.default);
   });
 
   return [] as unknown as JSX.Element;

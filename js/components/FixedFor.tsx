@@ -2,7 +2,7 @@ import { Reactive, reactive } from "~/signals";
 
 type ForProps<T extends object> = {
   each: T[],
-  do: (item: Reactive<T>, i: number) => JSX.Element,
+  do: (item: T, i: number) => JSX.Element,
 };
 
 /**
