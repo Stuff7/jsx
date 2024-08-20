@@ -209,17 +209,23 @@ const mountObserver = new MutationObserver((mutations) => {
   mutations.forEach((mutation) => {
     if (mutation.type !== "childList") { return }
 
-    if (mutation.addedNodes.length > 0) {
-      mutation.addedNodes.forEach(m => m.dispatchEvent(MountEvent));
+    for (const node of mutation.addedNodes) {
+      queueMicrotask(() => sendEventDeep(node, MountEvent));
     }
-    if (mutation.removedNodes.length > 0) {
-      mutation.removedNodes.forEach(m => m.dispatchEvent(UnmountEvent));
+    for (const node of mutation.removedNodes) {
+      queueMicrotask(() => sendEventDeep(node, UnmountEvent));
     }
   });
 });
 
-function observeChildren(parent: Node) {
-  mountObserver.observe(parent, { childList: true, subtree: true });
+function sendEventDeep(node: Node, event: CustomEvent) {
+  if (node.nodeType === node.ELEMENT_NODE) {
+    for (const c of (node as HTMLElement).getElementsByTagName("*")) {
+      c.dispatchEvent(event);
+    }
+  }
+
+  node.dispatchEvent(event);
 }
 
-observeChildren(document.body);
+mountObserver.observe(document.body, { childList: true, subtree: true });
