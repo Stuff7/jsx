@@ -55,7 +55,7 @@ export default function jsx<T extends JSX.Tag>(
     const propV = map[propK] as unknown;
     const attr = attrs[propK];
 
-    if (propK === "ref" && isRef(propV)) {
+    if (propK === "$ref" && isRef(propV)) {
       queueMicrotask(() => propV.value = element);
     }
     else if (propK === "class") {
@@ -137,14 +137,14 @@ export default function jsx<T extends JSX.Tag>(
     }
   }
 
-  if (typeof attributes?.["$if"] === "boolean") {
+  if (typeof attributes?.$if === "boolean") {
     queueMicrotask(() => {
       const parent = element.parentElement;
       const prevSibling = element.previousSibling;
       const nextSibling = element.nextSibling;
 
       watch(() => {
-        if (attributes["$if"]) {
+        if (attributes.$if) {
           if (document.contains(element)) {
             return;
           }

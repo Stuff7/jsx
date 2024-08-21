@@ -21,6 +21,7 @@ module.exports = {
         "caughtErrorsIgnorePattern": "jsx",
       },
     ],
+    "no-empty": ["warn", { "allowEmptyCatch": true }],
     "arrow-spacing": ["warn", { "before": true, "after": true }],
     "indent": ["warn", 2, { "SwitchCase": 1 }],
     "linebreak-style": [

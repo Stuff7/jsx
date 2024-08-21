@@ -1,15 +1,17 @@
-import jsx, { Fragment, computed } from "~/jsx";
+import { computed, watch } from "~/jsx";
+import { createElementPosition } from "~/utils";
 
 type TransitionProps = {
   name?: string,
+  $if?: boolean,
 };
 
-export default function Transition(props: TransitionProps, ...children: JSX.Children[]): JSX.Element {
-  const elem = children[0];
+export default function Transition(props: TransitionProps, slots: JSX.Slots): JSX.Element {
+  const elem = slots.default[0];
 
-  if (children.length !== 1 || !(elem instanceof HTMLElement)) {
+  if (slots.default.length !== 1 || !(elem instanceof HTMLElement)) {
     console.warn("<Transition> must have a single element as children");
-    return <>{children}</>;
+    return slots.default as unknown as JSX.Element;
   }
 
   const name = computed(() => props.name || "jsx");
@@ -28,37 +30,48 @@ export default function Transition(props: TransitionProps, ...children: JSX.Chil
     });
   }
 
-  let willUnmount = false;
-  const range = document.createRange();
-  elem.addEventListener("mount", async () => {
-    if (willUnmount || !document.contains(elem)) { return }
+  const anchor = createElementPosition();
 
-    range.setStartAfter(elem);
-
-    elem.classList.add(enterActive.value);
-    elem.classList.add(enterFrom.value);
-    await nextFrame();
-    elem.classList.remove(enterFrom.value);
-    elem.classList.add(enterTo.value);
-  });
-
-  elem.addEventListener("unmount", async () => {
-    if (willUnmount || document.contains(elem)) {
-      willUnmount = false;
+  function onMount() {
+    if (anchor.isPositioned()) {
       return;
     }
 
-    willUnmount = true;
-    range.insertNode(elem);
+    anchor.setFromElement(elem);
+    if (!props.$if) {
+      elem.remove();
+    }
 
-    elem.classList.add(leaveActive.value);
-    elem.classList.add(leaveFrom.value);
-    await nextFrame();
-    elem.classList.remove(leaveFrom.value);
-    elem.classList.add(leaveTo.value);
+    elem.removeEventListener("mount", onMount);
+  }
+
+  elem.addEventListener("mount", onMount);
+
+  watch(async () => {
+    if (props.$if) {
+      removeClasses();
+      if (elem.isConnected) { return }
+      elem.classList.add(enterFrom.value);
+      elem.classList.add(enterActive.value);
+
+      anchor.insertNode(elem);
+      await nextFrame();
+
+      elem.classList.remove(enterFrom.value);
+      elem.classList.add(enterTo.value);
+    }
+    else if (elem.isConnected) {
+      elem.classList.add(leaveFrom.value);
+      elem.classList.add(leaveActive.value);
+
+      await nextFrame();
+
+      elem.classList.remove(leaveFrom.value);
+      elem.classList.add(leaveTo.value);
+    }
   });
 
-  elem.addEventListener("transitionend", () => {
+  function removeClasses() {
     elem.classList.remove(enterActive.value);
     elem.classList.remove(enterFrom.value);
     elem.classList.remove(enterTo.value);
@@ -66,8 +79,14 @@ export default function Transition(props: TransitionProps, ...children: JSX.Chil
     elem.classList.remove(leaveActive.value);
     elem.classList.remove(leaveFrom.value);
     elem.classList.remove(leaveTo.value);
+  }
 
-    if (willUnmount) { elem.remove() }
+  elem.addEventListener("transitionend", () => {
+    removeClasses();
+
+    if (!props.$if) {
+      elem.remove();
+    }
   });
 
   return elem;

@@ -1,5 +1,5 @@
 import { Reactive, Ref, reactive, ref, watchOnly, isReactive } from "~/signals";
-import { reverseForEach, swap, arrLast } from "~/utils";
+import { reverseForEach, swap, arrLast, createElementPosition, InsertNodeFn } from "~/utils";
 
 type ForProps<T extends object> = {
   each: Reactive<T[]>,
@@ -7,45 +7,6 @@ type ForProps<T extends object> = {
 };
 
 type ReactiveNode = { idx: Ref<number>, elems: HTMLElement[] };
-
-type ElementPosition = {
-  parent: HTMLElement | null,
-  prevSibling: ChildNode | null,
-  nextSibling: ChildNode | null,
-  setFromElement<T extends Node>(element: T): void,
-  isPositioned(): boolean,
-  getInsertFunction(): InsertNodeFn,
-};
-
-type InsertNodeFn = ChildNode["after"];
-
-function createElementPosition(): ElementPosition {
-  return {
-    parent: null,
-    prevSibling: null,
-    nextSibling: null,
-    setFromElement(element) {
-      this.parent = element.parentElement;
-      this.prevSibling = element.previousSibling;
-      this.nextSibling = element.nextSibling;
-    },
-    isPositioned() {
-      return !!(this.parent || this.prevSibling || this.nextSibling);
-    },
-    getInsertFunction() {
-      if (this.prevSibling && this.prevSibling.parentElement) {
-        return this.prevSibling.after.bind(this.prevSibling);
-      }
-      if (this.nextSibling && this.nextSibling.parentElement) {
-        return this.nextSibling.before.bind(this.nextSibling);
-      }
-      if (this.parent) {
-        return this.parent.append.bind(this.parent);
-      }
-      throw new Error("Could not find element position");
-    },
-  };
-}
 
 /**
  * A component that renders a list of JSX elements from a reactive dynamically-sized array.
