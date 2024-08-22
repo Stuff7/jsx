@@ -1332,6 +1332,8 @@ export type HTMLElementAttributeMap = {
   time: Binders<TimeHTMLAttributes<HTMLTimeElement>>;
   title: Binders<HTMLAttributes<HTMLTitleElement>>;
   tr: Binders<HTMLAttributes<HTMLTableRowElement>>;
+  th: Binders<HTMLAttributes<HTMLTableCellElement>>;
+  td: Binders<HTMLAttributes<HTMLTableCellElement>>;
   track: Binders<TrackHTMLAttributes<HTMLTrackElement>>;
   u: Binders<HTMLAttributes<HTMLElement>>;
   ul: Binders<HTMLAttributes<HTMLUListElement>>;

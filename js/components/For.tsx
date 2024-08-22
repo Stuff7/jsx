@@ -18,6 +18,11 @@ type ReactiveNode = { idx: Ref<number>, elems: HTMLElement[] };
  */
 export default function For<T extends object>(props: ForProps<T>): JSX.Element {
   const anchor = document.createComment("For");
+  const swapData = {} as T;
+  const swapNode = {
+    idx: ref(0),
+    elems: [document.createComment("Swap") as unknown as HTMLElement],
+  };
   const position = createElementPosition();
 
   let isMounted = false;
@@ -103,16 +108,12 @@ export default function For<T extends object>(props: ForProps<T>): JSX.Element {
 
         let insertNode: InsertNodeFn;
         if (j !== -1) {
-          mountList[j][1] = {
-            idx: ref(j),
-            elems: node.elems.map(n => {
-              const tmp = document.createElement("slot");
-              n.replaceWith(tmp);
-              return tmp;
-            }),
-          };
-          mountList[j][0] = { ...mountList[j][0] };
-          const mountPoint = arrLast(mountList[j][1].elems);
+          const mountPoint = swapNode.elems[0];
+          node.elems.forEach((n) => n.replaceWith(mountPoint));
+
+          mountList[j][1] = swapNode;
+          mountList[j][0] = swapData;
+
           insertNode = mountPoint.after.bind(mountPoint);
         }
         else if (mountList.length > 0) {
