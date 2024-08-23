@@ -1,50 +1,24 @@
 const context = [] as Running<never>[];
 
 type Running<T> = {
-  execute<K extends keyof T>(key: K, value: T[K]): void;
+  execute(value: T): void;
   dependencies: Set<Listeners<T>>;
 };
 
 type Listeners<T> = Set<Running<T>>;
 
-export type Reactive<T> = T & {
-  listeners: Listeners<T>,
-};
-
-export type Ref<T> = Reactive<{
-  value: T,
-}>;
+export type Ref<T> = [get: (() => T) & { listeners: Listeners<T> }, set: (v: T) => void];
 
 export type BoolAttr = boolean | "true" | "false";
 
 export type ReactiveAttr = Ref<string> | Ref<boolean> | string | boolean;
 
-function hookListeners<T>(data: Reactive<T>) {
-  Object.defineProperty(data, "listeners", {
-    value: new Set(),
-    enumerable: false,
-    configurable: true,
-  });
-}
-
-export function ref<T>(value: T): Ref<T> {
-  const p = { value } as Ref<T>;
-  hookListeners(p);
-  return new Proxy<Ref<T>>(p, { get, set });
-}
-
-export function reactive<T extends object>(props: T): Reactive<T> {
-  hookListeners(props as Reactive<T>);
-  return new Proxy<Reactive<T>>(props as Reactive<T>, { get, set });
-}
-
-export function watch<T>(fn: Running<T>["execute"], deps: Reactive<unknown>[] = []) {
-  const execute: Running<T>["execute"] = (key, value) => {
+export function watch<T>(fn: Running<T>["execute"]) {
+  const execute: Running<T>["execute"] = (value) => {
     cleanup(running);
     context.push(running);
     try {
-      fn(key, value);
-      deps.forEach(dep => dep.listeners);
+      fn(value);
     }
     finally {
       context.pop();
@@ -56,15 +30,15 @@ export function watch<T>(fn: Running<T>["execute"], deps: Reactive<unknown>[] = 
     dependencies: new Set(),
   };
 
-  execute("" as keyof T, "" as T[keyof T]);
+  execute(undefined as T);
 }
 
 /**
  * Works like `watch` but it only subscribes to the specified dependencies (deps)
  * and ignores any other accesses from within the callback (fn).
  * */
-export function watchOnly<T>(deps: Reactive<unknown>[], fn: Running<T>["execute"]) {
-  const execute: Running<T>["execute"] = (key, value) => {
+export function watchOnly<T>(deps: (Ref<unknown>[0])[], fn: Running<T>["execute"]) {
+  const execute: Running<T>["execute"] = (value) => {
     cleanup(running);
 
     deps.forEach(dep => {
@@ -72,7 +46,7 @@ export function watchOnly<T>(deps: Reactive<unknown>[], fn: Running<T>["execute"
     });
 
     try {
-      fn(key, value);
+      fn(value);
     }
     finally {
       context.pop();
@@ -84,28 +58,31 @@ export function watchOnly<T>(deps: Reactive<unknown>[], fn: Running<T>["execute"
     dependencies: new Set(),
   };
 
-  execute("" as keyof T, "" as T[keyof T]);
+  execute(undefined as T);
 }
 
-export function computed<T>(fn: () => T) {
-  const c = ref(fn());
-  watch(() => c.value = fn());
-  return c;
-}
+export function ref<T>(value: T): Ref<T> {
+  const listeners: Listeners<T> = new Set;
 
-function get<T, R extends Reactive<T>>(target: R, key: string | symbol) {
-  const running = context[context.length - 1];
-  if (running) { subscribe(running, target.listeners) }
-  return target[key];
-}
+  return [
+    Object.assign(() => {
+      const running = context[context.length - 1];
+      if (running) { subscribe(running, listeners) }
+      return value;
+    }, { listeners }),
+    (val: T) => {
+      if (value === val) {
+        return;
+      }
+      const prev = value;
+      // eslint-disable-next-line no-param-reassign
+      value = val;
 
-function set<T, R extends Reactive<T>>(target: R, key: string | symbol, val: never) {
-  target[key] = val;
-
-  for (const sub of [...target.listeners]) {
-    sub.execute(key as keyof T, val);
-  }
-  return true;
+      for (const sub of [...listeners]) {
+        sub.execute(prev);
+      }
+    },
+  ];
 }
 
 function subscribe<T>(running: Running<T>, subscriptions: Listeners<T>) {
@@ -120,12 +97,8 @@ function cleanup<T>(running: Running<T>) {
   running.dependencies.clear();
 }
 
-export function isReactive(value: unknown): value is Reactive<object> {
-  return value instanceof Object && "listeners" in value && value.listeners instanceof Set;
-}
-
-export function isRef(value: unknown): value is Ref<unknown> {
-  return isReactive(value) && "value" in value;
+export function isRef(value: unknown): value is Ref<object> {
+  return value instanceof Function && "listeners" in value && value.listeners instanceof Set;
 }
 
 export function isBoolAttribute(value: unknown): value is BoolAttr {
