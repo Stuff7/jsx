@@ -118,24 +118,7 @@ export default function jsx<T extends JSX.Tag>(
     }
   }
 
-  for (const child of children) {
-    if (isRef(child)) {
-      element.append(`${child.value}`);
-      const node = element.childNodes[element.childNodes.length - 1];
-      watch(() => node.textContent = `${child.value}`);
-    }
-    else if (child instanceof Function) {
-      element.append(`${child()}`);
-      const node = element.childNodes[element.childNodes.length - 1];
-      watch(() => node.textContent = `${child()}`);
-    }
-    else if (Array.isArray(child)) {
-      element.append(...child);
-    }
-    else {
-      element.append(child);
-    }
-  }
+  mountChildren(element, children);
 
   if (typeof attributes?.$if === "boolean") {
     queueMicrotask(() => {
@@ -173,6 +156,27 @@ export default function jsx<T extends JSX.Tag>(
 
 export function Fragment(_: null, ...children: JSX.Children[]) {
   return children.flat(Infinity as 1);
+}
+
+function mountChildren(element: HTMLElement, children: Node[]) {
+  for (const child of children) {
+    if (isRef(child)) {
+      element.append(`${child.value}`);
+      const node = element.childNodes[element.childNodes.length - 1];
+      watch(() => node.textContent = `${child.value}`);
+    }
+    else if (child instanceof Function) {
+      element.append(`${child()}`);
+      const node = element.childNodes[element.childNodes.length - 1];
+      watch(() => node.textContent = `${child()}`);
+    }
+    else if (Array.isArray(child)) {
+      mountChildren(element, child);
+    }
+    else {
+      element.append(child);
+    }
+  }
 }
 
 function setClass(element: HTMLElement, map: Record<string, unknown>, propK: string, className?: string) {
