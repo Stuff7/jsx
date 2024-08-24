@@ -71,9 +71,6 @@ export function ref<T>(value: T): Ref<T> {
       return value;
     }, { listeners }),
     (val: T) => {
-      if (value === val) {
-        return;
-      }
       const prev = value;
       // eslint-disable-next-line no-param-reassign
       value = val;
@@ -95,10 +92,6 @@ function cleanup<T>(running: Running<T>) {
     dep.delete(running);
   }
   running.dependencies.clear();
-}
-
-export function isRef(value: unknown): value is Ref<object> {
-  return value instanceof Function && "listeners" in value && value.listeners instanceof Set;
 }
 
 export function isBoolAttribute(value: unknown): value is BoolAttr {

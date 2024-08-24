@@ -1,4 +1,4 @@
-import { isRef, isBoolAttribute, watch } from "~/signals";
+import { isBoolAttribute, watch } from "~/signals";
 
 export * from "~/signals";
 
@@ -55,21 +55,45 @@ export default function jsx<T extends JSX.Tag>(
     const propV = map[propK] as unknown;
     const attr = attrs[propK];
 
-    if (propK === "$ref" && isRef(propV)) {
-      queueMicrotask(() => propV.value = element);
-    }
-    else if (propK === "class") {
-      setClass(element, map, propK);
-    }
-    else if (propK[0] !== "$" && !propK.includes(":") && (isBoolAttribute(propV) || typeof propV === "number")) {
-      watch(() => {
-        if (typeof attr === "undefined") {
-          element.setAttribute(propK, `${map[propK]}`);
+    if (propK[0] === "$") {
+      if (propK === "$ref") {
+        if (propV instanceof Function) {
+          queueMicrotask(() => propV(element));
         }
         else {
-          attrs[propK] = map[propK];
+          queueMicrotask(() => map[propK] = element);
         }
-      });
+      }
+      else if (propK === "$if") {
+        queueMicrotask(() => {
+          const parent = element.parentElement;
+          const prevSibling = element.previousSibling;
+          const nextSibling = element.nextSibling;
+
+          watch(() => {
+            if (map.$if) {
+              if (document.contains(element)) {
+                return;
+              }
+              if (prevSibling && prevSibling.parentElement) {
+                prevSibling.after(element);
+              }
+              else if (nextSibling && nextSibling.parentElement) {
+                nextSibling.before(element);
+              }
+              else if (parent) {
+                parent.append(element);
+              }
+            }
+            else if (document.contains(element)) {
+              element.remove();
+            }
+            else {
+              queueMicrotask(() => element.remove());
+            }
+          });
+        });
+      }
     }
     else if (propK.startsWith("class:")) {
       setClass(element, map, propK, propK.slice(6));
@@ -79,25 +103,25 @@ export default function jsx<T extends JSX.Tag>(
     }
     else if (propK.startsWith("bind:")) {
       const k = propK.slice(5);
-      if (!isRef(propV)) {
+      if (!(propV instanceof Function)) {
         watch(() => attrs[k] = map[propK]);
         break;
       }
 
-      watch(() => attrs[k] = propV.value);
+      watch(() => attrs[k] = propV());
 
       if (k === "value") {
-        element.addEventListener("input", () => propV.value = attrs[k]);
+        element.addEventListener("input", () => propV(attrs[k]));
       }
       else {
-        element.addEventListener("change", () => propV.value = attrs[k]);
+        element.addEventListener("change", () => propV(attrs[k]));
       }
     }
     else if (propK.startsWith("style:")) {
       const k = propK.slice(6);
       const updateStyle = (v: unknown) => element.style.setProperty(k, `${v}`);
-      if (isRef(propV)) {
-        watch(() => updateStyle(propV.value));
+      if (propV instanceof Function) {
+        watch(() => updateStyle(propV()));
       }
       else {
         watch(() => updateStyle(map[propK]));
@@ -106,50 +130,32 @@ export default function jsx<T extends JSX.Tag>(
     else if (propK.startsWith("var:")) {
       const k = propK.slice(4);
       const updateStyle = (v: unknown) => element.style.setProperty(`--${k}`, `${v}`);
-      if (isRef(propV)) {
-        watch(() => updateStyle(propV.value));
+      if (propV instanceof Function) {
+        watch(() => updateStyle(propV()));
       }
       else {
         watch(() => updateStyle(map[propK]));
       }
     }
-    else if (isRef(propV) && (isBoolAttribute(propV.value) || typeof propV.value === "number")) {
-      watch(() => setAttribute(element, attrs, attr, propK, propV.value));
+    else if (propK === "class") {
+      setClass(element, map, propK);
+    }
+    else if (isBoolAttribute(propV) || typeof propV === "number") {
+      watch(() => {
+        if (typeof attr === "undefined") {
+          element.setAttribute(propK, `${map[propK]}`);
+        }
+        else {
+          attrs[propK] = map[propK];
+        }
+      });
+    }
+    else if (propV instanceof Function && (isBoolAttribute(propV()) || typeof propV() === "number")) {
+      watch(() => setAttribute(element, attrs, attr, propK, propV()));
     }
   }
 
   mountChildren(element, children);
-
-  if (typeof attributes?.$if === "boolean") {
-    queueMicrotask(() => {
-      const parent = element.parentElement;
-      const prevSibling = element.previousSibling;
-      const nextSibling = element.nextSibling;
-
-      watch(() => {
-        if (attributes.$if) {
-          if (document.contains(element)) {
-            return;
-          }
-          if (prevSibling && prevSibling.parentElement) {
-            prevSibling.after(element);
-          }
-          else if (nextSibling && nextSibling.parentElement) {
-            nextSibling.before(element);
-          }
-          else if (parent) {
-            parent.append(element);
-          }
-        }
-        else if (document.contains(element)) {
-          element.remove();
-        }
-        else {
-          queueMicrotask(() => element.remove());
-        }
-      });
-    });
-  }
 
   return element;
 }
@@ -160,12 +166,7 @@ export function Fragment(_: null, ...children: JSX.Children[]) {
 
 function mountChildren(element: HTMLElement, children: Node[]) {
   for (const child of children) {
-    if (isRef(child)) {
-      element.append(`${child.value}`);
-      const node = element.childNodes[element.childNodes.length - 1];
-      watch(() => node.textContent = `${child.value}`);
-    }
-    else if (child instanceof Function) {
+    if (child instanceof Function) {
       element.append(`${child()}`);
       const node = element.childNodes[element.childNodes.length - 1];
       watch(() => node.textContent = `${child()}`);

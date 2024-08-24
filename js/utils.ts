@@ -10,6 +10,56 @@ export function arrLast<T>(arr: T[]): T {
   return arr[arr.length - 1];
 }
 
+export function deepEq<A extends object, B extends object>(a: A | B, b: B | A): boolean {
+  const keys1 = Object.keys(a);
+  const keys2 = Object.keys(b);
+
+  const allKeys = new Set([...keys1, ...keys2]);
+
+  for (const key of allKeys) {
+    const aV = a[key];
+    const bV = b[key];
+
+    if (typeof aV === "object" && typeof bV === "object") {
+      if (aV instanceof Date && bV instanceof Date) {
+        if (aV.getTime() !== bV.getTime()) {
+          return false;
+        }
+      }
+      else if (aV instanceof Map && bV instanceof Map) {
+        if (aV.size !== bV.size) {
+          return false;
+        }
+
+        for (const [key, value] of aV) {
+          if (!bV.has(key) || bV.get(key) !== value) {
+            return false;
+          }
+        }
+      }
+      else if (aV instanceof Set && bV instanceof Set) {
+        if (aV.size !== bV.size) {
+          return false;
+        }
+
+        for (const item of aV) {
+          if (!bV.has(item)) {
+            return false;
+          }
+        }
+      }
+      else if (!deepEq(aV, bV)) {
+        return false;
+      }
+    }
+    else if (aV !== bV) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export type ElementPosition = {
   parent: HTMLElement | null,
   prevSibling: ChildNode | null,

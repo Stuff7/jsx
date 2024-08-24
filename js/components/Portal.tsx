@@ -1,4 +1,4 @@
-import { computed, watch } from "~/signals";
+import { watch } from "~/signals";
 
 type PortalProps = {
   to?: Element | string,
@@ -6,7 +6,7 @@ type PortalProps = {
 };
 
 export default function Portal(props: PortalProps, slots: JSX.Slots) {
-  const parent = computed(() => {
+  const parent = () => {
     if (!props.to) {
       props.$ref = document.body;
     }
@@ -17,10 +17,10 @@ export default function Portal(props: PortalProps, slots: JSX.Slots) {
       props.$ref = document.querySelector(props.to) || document.body;
     }
     return props.$ref;
-  });
+  };
 
   watch(() => {
-    parent.value.append(...slots.default);
+    parent().append(...slots.default);
   });
 
   return [] as unknown as JSX.Element;

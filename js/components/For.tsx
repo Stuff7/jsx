@@ -1,8 +1,8 @@
-import { Reactive, Ref, reactive, ref, watchOnly, isReactive } from "~/signals";
+import { Ref, ref, watchOnly } from "~/signals";
 import { reverseForEach, swap, arrLast, createElementPosition, InsertNodeFn } from "~/utils";
 
 type ForProps<T extends object> = {
-  each: Reactive<T[]>,
+  each: T[],
   do: (item: T, i: Ref<number>) => JSX.Element,
 };
 
@@ -39,9 +39,9 @@ export default function For<T extends object>(props: ForProps<T>): JSX.Element {
     if (isMounted) { return }
 
     mountList = props.each.map((item, i): [T, ReactiveNode] => {
-      const data = reactive(item);
-      props.each[i] = data;
-      return [data, createNode(data, i)];
+      const [data, setData] = ref(item);
+      // props.each[i] = data();
+      return [data(), createNode(data(), i)];
     });
     const mounted = mountList.map(([_, n]) => n.elems).flat();
 
@@ -56,9 +56,9 @@ export default function For<T extends object>(props: ForProps<T>): JSX.Element {
   });
 
   function createNode(val: T, i: number): ReactiveNode {
-    const isValReactive = isReactive(val);
+    const isValReactive = true;
     const idx = ref(i);
-    const data = isValReactive ? val : reactive(val);
+    const data = isValReactive ? val : ref(val);
     if (!isValReactive) {
       props.each[idx.value] = data;
     }
