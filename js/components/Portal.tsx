@@ -2,21 +2,24 @@ import { watch } from "~/signals";
 
 type PortalProps = {
   to?: Element | string,
-  $ref?: Element | null,
+  $ref?: (v: Element) => void,
 };
 
 export default function Portal(props: PortalProps, slots: JSX.Slots) {
   const parent = () => {
+    let el: Element;
     if (!props.to) {
-      props.$ref = document.body;
+      el = document.body;
     }
     else if (props.to instanceof Element) {
-      props.$ref = props.to;
+      el = props.to;
     }
     else {
-      props.$ref = document.querySelector(props.to) || document.body;
+      el = document.querySelector(props.to) || document.body;
     }
-    return props.$ref;
+
+    props.$ref?.(el);
+    return el;
   };
 
   watch(() => {

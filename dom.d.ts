@@ -24,7 +24,7 @@ type StripPrefix<T, K, Prefix extends string> = RemovePrefix<K, Prefix> extends 
   T[RemovePrefix<K, Prefix>] : never;
 
 type StyleProps = {
-  [K in `style:${keyof PropertiesHyphen}`]?: RefUnion<StripPrefix<PropertiesHyphen, K, "style:">> | string;
+  [K in `style:${keyof PropertiesHyphen}`]?: Union<StripPrefix<PropertiesHyphen, K, "style:">> | string;
 } & { [K in `var:${string}`]?: string } & { [K in `class:${string}`]?: BoolAttr };
 
 type Binders<T> = T & (
@@ -1157,7 +1157,7 @@ interface SVGAttributes<T> extends AriaAttributes, DOMAttributes<T> {
 }
 
 export interface HTMLAttributes<T> extends AriaAttributes, Partial<DOMAttributes<T>> {
-  $ref?: { value: T | null },
+  $ref?: (ref: T) => void | T | null,
   // Standard HTML Attributes
   accesskey?: string | undefined;
   autofocus?: boolean | undefined;

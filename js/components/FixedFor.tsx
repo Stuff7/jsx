@@ -1,7 +1,6 @@
-import { ref, watch } from "~/signals";
-import { deepEq } from "~/utils";
+import { isReactiveObject, reactive, ref, watch } from "~/signals";
 
-type ForProps<T extends object> = {
+type ForProps<T> = {
   each: T[],
   do: (item: () => T, i: number) => JSX.Element,
 };
@@ -15,9 +14,21 @@ type ForProps<T extends object> = {
  *
  * @note If you need to render a dynamically-sized array use <For> instead.
  */
-export default function FixedFor<T extends object>(props: ForProps<T>): JSX.Element {
+export default function FixedFor<T>(props: ForProps<T>): JSX.Element {
   return props.each.map((_, i) => {
     const [item, setItem] = ref(props.each[i]);
+
+    const currentItem = item();
+    if (currentItem && typeof currentItem === "object" && !isReactiveObject(currentItem)) {
+      reactive(currentItem);
+    }
+
+    watch(() => {
+      const newItem = props.each[i];
+      if (item() !== newItem) {
+        setItem(newItem);
+      }
+    });
 
     return props.do(item, i);
   }) as unknown as JSX.Element;

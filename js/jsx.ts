@@ -103,18 +103,23 @@ export default function jsx<T extends JSX.Tag>(
     }
     else if (propK.startsWith("bind:")) {
       const k = propK.slice(5);
-      if (!(propV instanceof Function)) {
+      if (!(propV instanceof Array)) {
         watch(() => attrs[k] = map[propK]);
         break;
       }
 
-      watch(() => attrs[k] = propV());
+      const [get, set] = propV;
+      if (!(get instanceof Function) || !(set instanceof Function)) {
+        break;
+      }
+
+      watch(() => attrs[k] = get());
 
       if (k === "value") {
-        element.addEventListener("input", () => propV(attrs[k]));
+        element.addEventListener("input", () => set(attrs[k]));
       }
       else {
-        element.addEventListener("change", () => propV(attrs[k]));
+        element.addEventListener("change", () => set(attrs[k]));
       }
     }
     else if (propK.startsWith("style:")) {
