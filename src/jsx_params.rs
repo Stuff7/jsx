@@ -34,7 +34,8 @@ pub fn parse<I: Iterator<Item = PathBuf>>(paths: I) -> Result<(), ParserError> {
 
   let q_src = if let Some(jsx_ident) = jsx_ident {
     &Q_PROPS.replace("jsx", jsx_ident)
-  } else {
+  }
+  else {
     Q_PROPS
   };
 
@@ -67,7 +68,26 @@ pub fn parse<I: Iterator<Item = PathBuf>>(paths: I) -> Result<(), ParserError> {
 
         let node_type = val.node.grammar_name();
         if node_type == "identifier" || node_type == "member_expression" || node_type == "subscript_expression" {
-          outbuf.extend_from_slice(format!(",set {sbo}{key_txt}{sbc}(v){{{val_txt}=v}}").as_bytes());
+          const VALID_IDENTS: [char; 114] = [
+            'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a',
+            'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '_', '$',
+            'α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ', 'λ', 'μ', 'ν', 'ξ', 'ο', 'π', 'ρ', 'σ', 'τ', 'υ', 'φ', 'χ', 'ψ', 'ω', 'А', 'Б', 'В',
+            'Г', 'Д', 'Е', 'Ж', 'З', 'И', 'Й', 'К', 'Л', 'М', 'Н', 'О', 'П', 'Р', 'С', 'Т', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ', 'Ъ', 'Ы', 'Ь', 'Э',
+            'Ю', 'Я', 'ℕ', 'ℤ', 'ℝ', 'ℂ',
+          ];
+
+          let mut param_ident = VALID_IDENTS[0];
+          if val_txt.len() == 1 {
+            let v = val_txt.chars().next().unwrap();
+            let mut i = 1;
+
+            while param_ident == v {
+              param_ident = VALID_IDENTS[i];
+              i += 1;
+            }
+          }
+
+          outbuf.extend_from_slice(format!(",set {sbo}{key_txt}{sbc}({param_ident}){{{val_txt}={param_ident}}}").as_bytes());
         }
       }
 
