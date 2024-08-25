@@ -172,7 +172,13 @@ export function Fragment(_: null, ...children: JSX.Children[]) {
 function mountChildren(element: HTMLElement, children: Node[]) {
   for (const child of children) {
     if (child instanceof Function) {
-      element.append(`${child()}`);
+      const ret = child();
+      if (ret instanceof Element) {
+        element.append(ret);
+        continue;
+      }
+
+      element.append(`${ret}`);
       const node = element.childNodes[element.childNodes.length - 1];
       watch(() => node.textContent = `${child()}`);
     }
