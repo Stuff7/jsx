@@ -48,8 +48,28 @@ export default function Transition(props: TransitionProps, slots: JSX.Slots): JS
   elem.addEventListener("mount", onMount);
 
   watch(async () => {
+    if (elem.classList.length) {
+      if (!props.$if && (
+        elem.classList.contains(enterFrom()) ||
+        elem.classList.contains(enterActive()) ||
+        elem.classList.contains(enterTo())
+      )) {
+        await nextFrame();
+        removeClasses();
+        elem.remove();
+      }
+      else if (props.$if && (
+        elem.classList.contains(leaveFrom()) ||
+        elem.classList.contains(leaveTo()) ||
+        elem.classList.contains(leaveActive())
+      )) {
+        await nextFrame();
+        removeClasses();
+        elem.remove();
+      }
+    }
+
     if (props.$if) {
-      removeClasses();
       if (elem.isConnected) { return }
       elem.classList.add(enterFrom());
       elem.classList.add(enterActive());
