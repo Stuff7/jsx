@@ -8,6 +8,7 @@
          (object
            (pair
              key: (_) @key
+             (#not-match? @key "on:.*")
              value: [
                (identifier)
                (member_expression)

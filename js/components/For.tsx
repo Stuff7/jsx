@@ -28,15 +28,32 @@ export default function For<T>(props: ForProps<T>): JSX.Element {
     }
     initialPosition.setFromElement(anchor);
     anchor.remove();
-    list.forEach(n => initialPosition.insertNode(n));
+    list.forEach((n, i) => {
+      const lastElem = list[i - 1];
+      let insertNode: InsertNodeFn;
+
+      if (lastElem?.isConnected) {
+        insertNode = lastElem.after.bind(lastElem);
+      }
+      else {
+        insertNode = initialPosition.getInsertFunction();
+      }
+
+      return insertNode(n);
+    });
   });
 
-  function createNode(_: T, i: number) {
-    const [item, setItem] = ref(props.each[i]);
+  function createNode(data: T, i: number) {
+    const [item, setItem] = ref(data);
 
     const currentItem = item();
-    if (currentItem && typeof currentItem === "object" && !isReactiveObject(currentItem)) {
-      reactive(currentItem);
+    if (currentItem && typeof currentItem === "object") {
+      if (isReactiveObject(currentItem)) {
+        currentItem.listeners.clear();
+      }
+      else {
+        reactive(currentItem);
+      }
     }
 
     let removed = false;
@@ -49,10 +66,10 @@ export default function For<T>(props: ForProps<T>): JSX.Element {
       }
 
       if (item() !== newItem) {
+        refs[i] = newItem;
         if (newItem === undefined) {
-          list[i].remove();
-          length = refs.length = list.length = props.each.length;
           removed = true;
+          removeNode();
         }
         else {
           setItem(newItem);
@@ -65,26 +82,36 @@ export default function For<T>(props: ForProps<T>): JSX.Element {
     return props.do(item, i);
   }
 
+  function removeNode() {
+    if (props.each.length < length) {
+      if (refs[length - 1] !== undefined) { return }
+      for (let i = length - 1; i >= props.each.length; i--) {
+        list[i].remove();
+      }
+      length = refs.length = list.length = props.each.length;
+    }
+  }
+
   watch(() => {
     if (props.each.length > length) {
-      const lastElem = list[length - 1];
-
-      let insertNode: InsertNodeFn;
-      if (lastElem) {
-        insertNode = lastElem.after.bind(lastElem);
-      }
-      else {
-        insertNode = initialPosition.getInsertFunction();
-      }
-
       for (let i = length; i < props.each.length; i++) {
+        const lastElem = list[i - 1];
+
+        let insertNode: InsertNodeFn;
+        if (lastElem?.isConnected) {
+          insertNode = lastElem.after.bind(lastElem);
+        }
+        else {
+          insertNode = initialPosition.getInsertFunction();
+        }
+
         const node = createNode(props.each[i], i);
         insertNode(node);
         list.push(node);
       }
-    }
 
-    length = refs.length;
+      length = refs.length = list.length = props.each.length;
+    }
   });
 
   return anchor as unknown as JSX.Element;

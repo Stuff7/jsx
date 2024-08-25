@@ -1,11 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { BoolAttr, ReactiveAttr, Ref } from "~/signals";
+import { BoolAttr, ReactiveAttr, Ref } from "./signals";
 import { Properties, PropertiesHyphen } from "csstype";
 
 type RemovePrefix<T, Prefix extends string> = T extends `${Prefix}${infer S}` ? S : T;
 type OnEventName = Exclude<keyof GlobalEventHandlers, `${string}EventListener`>;
 type EventName = RemovePrefix<OnEventName, "on">;
 
+declare global {
+  interface GlobalEventHandlers {
+    "onmount": ((this: GlobalEventHandlers, ev: Event) => void) | null,
+    "onunmount": ((this: GlobalEventHandlers, ev: Event) => void) | null,
+  }
+}
+
+type X = GlobalEventHandlers["onclick"];
+type Y = GlobalEventHandlers["onmount"];
 type ExtractEvent<T extends OnEventName> =
   GlobalEventHandlers[T] extends (((this: GlobalEventHandlers, ev: infer K) => any) | null) ? K : never;
 
@@ -24,7 +33,7 @@ type StripPrefix<T, K, Prefix extends string> = RemovePrefix<K, Prefix> extends 
   T[RemovePrefix<K, Prefix>] : never;
 
 type StyleProps = {
-  [K in `style:${keyof PropertiesHyphen}`]?: Union<StripPrefix<PropertiesHyphen, K, "style:">> | string;
+  [K in `style:${keyof PropertiesHyphen}`]?: Union<StripPrefix<PropertiesHyphen, K, "style:">> | string | null;
 } & { [K in `var:${string}`]?: string } & { [K in `class:${string}`]?: BoolAttr };
 
 type Binders<T> = T & (
@@ -1157,7 +1166,7 @@ interface SVGAttributes<T> extends AriaAttributes, DOMAttributes<T> {
 }
 
 export interface HTMLAttributes<T> extends AriaAttributes, Partial<DOMAttributes<T>> {
-  $ref?: (ref: T) => void | T | null,
+  $ref?: ((ref: T) => void) | T | null,
   // Standard HTML Attributes
   accesskey?: string | undefined;
   autofocus?: boolean | undefined;

@@ -23,7 +23,7 @@ const [animals, setAnimals] = ref<Animal[]>([
 
 setInterval(() => {
   animals()[0].count++;
-}, 1e3);
+}, 2e3);
 
 watchOnly([animals], () => console.log(animals()));
 
@@ -50,20 +50,29 @@ function addAnimal() {
 }
 
 const [filtered, setFiltered] = ref([...animals()]);
-watchOnly([animals], () => {
-  setFiltered([...animals()]);
-});
+const [nameFilter, setNameFilter] = ref("");
 
-function search(this: HTMLInputElement) {
-  setFiltered(animals().filter(a => a.name.includes(this.value)));
+watchOnly([animals], filterByName);
+
+function filterByName() {
+  if (!nameFilter()) {
+    setFiltered([...animals()]);
+    console.log("EMPTY", JSON.stringify(animals()), "\n\n", JSON.stringify(filtered()));
+    return;
+  }
+
+  setFiltered(animals().filter(a => a.name.includes(nameFilter())));
+  console.log("FILTER", nameFilter(), JSON.stringify(animals()), "\n\n", JSON.stringify(filtered()));
 }
+
+const [index, setIndex] = ref(0);
 
 document.head.append(<style>{style()}</style>);
 document.body.append(
   <main>
-    <input on:input={search} />
+    <input bind:value={[nameFilter, setNameFilter]} on:input={filterByName} />
     <For each={filtered()} do={(animal, i) => (
-      <div class:row >
+      <div class:row on:click={() => setIndex(i)} >
         <strong>{i}</strong>
         <span>
           <em on:click={() => animal().count++}>{animal().count} {animal().name}{animal().count === 1 ? "" : "s"} </em>
@@ -76,6 +85,7 @@ document.body.append(
     )} />
     <button on:click={addAnimal}>Push</button>
     <button on:click={() => setAnimals.byRef((animals) => animals.sort((a, b) => a.count - b.count))}>Sort</button>
+    <h1>You've clicked index #{index()}</h1>
   </main>,
 );
 
