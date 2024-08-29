@@ -13,10 +13,8 @@ declare global {
   }
 }
 
-type X = GlobalEventHandlers["onclick"];
-type Y = GlobalEventHandlers["onmount"];
 type ExtractEvent<T extends OnEventName> =
-  GlobalEventHandlers[T] extends (((this: GlobalEventHandlers, ev: infer K) => any) | null) ? K : never;
+  GlobalEventHandlers[T] extends (((this: GlobalEventHandlers, ev: infer K) => any) | null | undefined) ? K : never;
 
 type SpecialProps = {
   "$if"?: boolean,
@@ -38,7 +36,7 @@ type StyleProps = {
 
 type Binders<T> = T & (
   keyof T extends string ? {
-    [K in `bind:${keyof T}`]?: RefUnion<StripPrefix<T, K, "bind:">>;
+    [K in `bind:${keyof T}`]?: RefUnion<StripPrefix<T, K, "bind:">> | Union<StripPrefix<T, K, "bind:">>;
   } & StyleProps : never
 );
 

@@ -44,13 +44,53 @@ export function watch<T>(fn: Running<T>["execute"]) {
  * Works like `watch` but it only subscribes to the specified dependencies (deps)
  * and ignores any other accesses from within the callback (fn).
  * */
-export function watchOnly<T>(deps: ({ listeners: Listeners<T> })[], fn: Running<T>["execute"]) {
+export function watchOnly<T>(deps: ({ listeners: Listeners<unknown> })[], fn: Running<T>["execute"]) {
   const execute: Running<T>["execute"] = (value) => {
     cleanup(running);
 
     deps.forEach(dep => {
       subscribe(running, dep.listeners);
     });
+
+    try {
+      fn(value);
+    }
+    finally {
+      context.pop();
+    }
+  };
+
+  const running: Running<T> = {
+    execute,
+    dependencies: new Set(),
+  };
+
+  execute(undefined as T);
+}
+
+/**
+ * Works like `watchOnly` but allows more flexibility on the type of reactive variable it can take as a dependency.
+ * */
+export function watchVar<T>(deps: unknown[], fn: Running<T>["execute"]) {
+  const execute: Running<T>["execute"] = (value) => {
+    cleanup(running);
+
+    context.push(running);
+    deps.forEach(dep => {
+      if (typeof dep === "function") {
+        dep();
+      }
+      else if (dep && typeof dep === "object" && isReactiveObject(dep)) {
+        for (const key in dep) {
+          dep[key];
+          break;
+        }
+      }
+      else {
+        `${dep}`;
+      }
+    });
+    context.pop();
 
     try {
       fn(value);
