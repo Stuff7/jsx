@@ -99,6 +99,7 @@ export default function For<T>(props: ForProps<T>): JSX.Element {
 
         let insertNode: InsertNodeFn;
         if (lastElem?.isConnected) {
+          initialPosition.setFromElement(lastElem);
           insertNode = lastElem.after.bind(lastElem);
         }
         else {
