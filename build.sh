@@ -6,5 +6,5 @@ target/release/jsx dist
 target/release/ts_imports dist
 
 # Bundle external types
-sed -i '/import .* from "csstype";/r node_modules/csstype/index.d.ts' dist/types/dom.d.ts
-sed -i '/import .* from "csstype";/d' dist/types/dom.d.ts
+sed -i '/import .* from "csstype";/r node_modules/csstype/index.d.ts' dist/types/dom-utils.d.ts
+sed -i '/import .* from "csstype";/d' dist/types/dom-utils.d.ts

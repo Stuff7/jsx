@@ -1,4 +1,5 @@
 import { isBoolAttribute, watch } from "~/signals";
+import { EventName } from "./dom-utils";
 
 export * from "~/signals";
 
@@ -8,10 +9,10 @@ export default function jsx<T extends JSX.Tag>(
   tag: T | JSX.Component,
   attributes: { [key: string]: unknown; } | null,
   ...children: Node[]
-) {
+): Node {
   "use JSX";
   if (typeof tag === "function") {
-    if (tag === Fragment as unknown as JSX.Component) { return Fragment(null, ...children) }
+    if (tag === Fragment as unknown as JSX.Component) { return Fragment(null, ...children) as unknown as Node }
 
     const slots = { default: [] as JSX.Slots["default"] } as JSX.Slots;
     for (const c of children) {
@@ -19,8 +20,11 @@ export default function jsx<T extends JSX.Tag>(
       if (c instanceof HTMLElement && c.slot) {
         slots[c.slot] = elems;
       }
+      else if (elems instanceof Array) {
+        slots.default.push(...elems);
+      }
       else {
-        slots.default.push(...(elems instanceof Array ? elems : [elems]));
+        slots.default.push(elems);
       }
     }
 
@@ -38,14 +42,14 @@ export default function jsx<T extends JSX.Tag>(
 
   if (currentSlots && element instanceof HTMLSlotElement) {
     if (attributes?.name == null && currentSlots.default) {
-      return currentSlots.default;
+      return currentSlots.default as unknown as Node;
     }
 
     if (typeof attributes?.name === "string" && attributes.name in currentSlots) {
       return currentSlots[attributes.name];
     }
 
-    return children;
+    return children as unknown as Node;
   }
 
   const map = (attributes ?? {});
@@ -98,8 +102,21 @@ export default function jsx<T extends JSX.Tag>(
     else if (propK.startsWith("class:")) {
       setClass(element, map, propK, propK.slice(6));
     }
-    else if (propK.startsWith("on:") && typeof propV === "function") {
-      element.addEventListener(propK.slice(3), propV as EventListenerOrEventListenerObject);
+    else if (propK.startsWith("on:")) {
+      if (typeof propV === "function") {
+        element.addEventListener(propK.slice(3), propV as () => void);
+      }
+      else if (propV instanceof Array) {
+        element.addEventListener(propK.slice(3), propV[0], propV[1]);
+      }
+    }
+    else if (propK.startsWith("win:on")) {
+      if (typeof propV === "function") {
+        addWindowEventListener(element, propK.slice(6) as EventName, propV as () => void);
+      }
+      else if (propV instanceof Array) {
+        addWindowEventListener(element, propK.slice(6) as EventName, propV[0], propV[1]);
+      }
     }
     else if (propK.startsWith("bind:")) {
       const k = propK.slice(5);
@@ -169,6 +186,23 @@ export function Fragment(_: null, ...children: JSX.Children[]) {
   return children.flat(Infinity as 1);
 }
 
+function addWindowEventListener(target: EventTarget, typ: EventName, fn: () => void, opts?: AddEventListenerOptions) {
+  window.addEventListener(typ, fn, opts);
+  const events = WIN_EVENTS.get(target);
+  if (!events) {
+    WIN_EVENTS.set(target, [[typ, [{ fn, opts }]]]);
+    return;
+  }
+
+  const ev = events.find(e => e[0] === typ);
+  if (!ev) {
+    events.push([typ, [{ fn, opts }]]);
+    return;
+  }
+
+  ev[1].push({ fn, opts });
+}
+
 function mountChildren(element: HTMLElement, children: Node[]) {
   for (const child of children) {
     if (child instanceof Function) {
@@ -218,6 +252,9 @@ function setAttribute(
   }
 }
 
+type AddEventParams = { fn: () => void, opts?: AddEventListenerOptions };
+
+const WIN_EVENTS = new WeakMap<EventTarget, [EventName, AddEventParams[]][]>;
 const MountEvent = new CustomEvent("mount");
 const UnmountEvent = new CustomEvent("unmount");
 
@@ -226,22 +263,48 @@ const mountObserver = new MutationObserver((mutations) => {
     if (mutation.type !== "childList") { return }
 
     for (const node of mutation.addedNodes) {
-      queueMicrotask(() => sendEventDeep(node, MountEvent));
+      queueMicrotask(() => {
+        iterChildrenDeep(node, node => {
+          const events = WIN_EVENTS.get(node);
+          if (events && events.length) {
+            events.forEach(([e, handlers]) => {
+              handlers.forEach(h => {
+                window.addEventListener(e, h.fn, h.opts);
+              });
+            });
+          }
+
+          node.dispatchEvent(MountEvent);
+        });
+      });
     }
     for (const node of mutation.removedNodes) {
-      queueMicrotask(() => sendEventDeep(node, UnmountEvent));
+      queueMicrotask(() => {
+        iterChildrenDeep(node, node => {
+          const events = WIN_EVENTS.get(node);
+          if (events && events.length) {
+            events.forEach(([e, handlers]) => {
+              handlers.forEach(h => {
+                window.removeEventListener(e, h.fn, h.opts);
+              });
+            });
+          }
+
+          node.dispatchEvent(UnmountEvent);
+        });
+      });
     }
   });
 });
 
-function sendEventDeep(node: Node, event: CustomEvent) {
+function iterChildrenDeep(node: Node, fn: (node: EventTarget) => void) {
   if (node.nodeType === node.ELEMENT_NODE) {
     for (const c of (node as HTMLElement).getElementsByTagName("*")) {
-      c.dispatchEvent(event);
+      fn(c);
     }
   }
 
-  node.dispatchEvent(event);
+  fn(node);
 }
 
 mountObserver.observe(document.body, { childList: true, subtree: true });

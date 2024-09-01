@@ -32,7 +32,7 @@ export default function Transition(props: TransitionProps, slots: JSX.Slots): JS
 
   const anchor = createElementPosition();
 
-  function onMount() {
+  elem.addEventListener("mount", () => {
     if (anchor.isPositioned()) {
       return;
     }
@@ -41,11 +41,7 @@ export default function Transition(props: TransitionProps, slots: JSX.Slots): JS
     if (!props.$if) {
       elem.remove();
     }
-
-    elem.removeEventListener("mount", onMount);
-  }
-
-  elem.addEventListener("mount", onMount);
+  }, { once: true });
 
   watch(async () => {
     if (elem.classList.length) {

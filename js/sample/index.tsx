@@ -57,12 +57,10 @@ watchOnly([animals], filterByName);
 function filterByName() {
   if (!nameFilter()) {
     setFiltered([...animals()]);
-    console.log("EMPTY", JSON.stringify(animals()), "\n\n", JSON.stringify(filtered()));
     return;
   }
 
   setFiltered(animals().filter(a => a.name.includes(nameFilter())));
-  console.log("FILTER", nameFilter(), JSON.stringify(animals()), "\n\n", JSON.stringify(filtered()));
 }
 
 const [index, setIndex] = ref(0);

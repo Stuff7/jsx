@@ -69,28 +69,19 @@ export function watchOnly<T>(deps: ({ listeners: Listeners<unknown> })[], fn: Ru
 }
 
 /**
- * Works like `watchOnly` but allows more flexibility on the type of reactive variable it can take as a dependency.
+ * Works like `watchOnly` but only watches the dependencies used in `depsFn`.
  * */
-export function watchVar<T>(deps: unknown[], fn: Running<T>["execute"]) {
+export function watchFn<T>(deps: () => unknown, fn: Running<T>["execute"]) {
   const execute: Running<T>["execute"] = (value) => {
     cleanup(running);
-
     context.push(running);
-    deps.forEach(dep => {
-      if (typeof dep === "function") {
-        dep();
-      }
-      else if (dep && typeof dep === "object" && isReactiveObject(dep)) {
-        for (const key in dep) {
-          dep[key];
-          break;
-        }
-      }
-      else {
-        `${dep}`;
-      }
-    });
-    context.pop();
+
+    try {
+      deps();
+    }
+    finally {
+      context.pop();
+    }
 
     try {
       fn(value);
