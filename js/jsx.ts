@@ -54,6 +54,7 @@ export default function jsx<T extends JSX.Tag>(
 
   const map = (attributes ?? {});
   const attrs = element as Record<string, unknown>;
+  const elemRef = new WeakRef(element);
 
   for (const propK in map) {
     const propV = map[propK] as unknown;
@@ -75,32 +76,35 @@ export default function jsx<T extends JSX.Tag>(
           const nextSibling = element.nextSibling;
 
           watch(() => {
+            const elem = elemRef.deref();
+            if (!elem) { return }
+
             if (map.$if) {
-              if (document.contains(element)) {
+              if (document.contains(elem)) {
                 return;
               }
               if (prevSibling && prevSibling.parentElement) {
-                prevSibling.after(element);
+                prevSibling.after(elem);
               }
               else if (nextSibling && nextSibling.parentElement) {
-                nextSibling.before(element);
+                nextSibling.before(elem);
               }
               else if (parent) {
-                parent.append(element);
+                parent.append(elem);
               }
             }
-            else if (document.contains(element)) {
-              element.remove();
+            else if (document.contains(elem)) {
+              elem.remove();
             }
             else {
-              queueMicrotask(() => element.remove());
+              queueMicrotask(() => elem.remove());
             }
           });
         });
       }
     }
     else if (propK.startsWith("class:")) {
-      setClass(element, map, propK, propK.slice(6));
+      setClass(elemRef, map, propK, propK.slice(6));
     }
     else if (propK.startsWith("on:")) {
       if (typeof propV === "function") {
@@ -160,12 +164,12 @@ export default function jsx<T extends JSX.Tag>(
       }
     }
     else if (propK === "class") {
-      setClass(element, map, propK);
+      setClass(elemRef, map, propK);
     }
     else if (isBoolAttribute(propV) || typeof propV === "number") {
       watch(() => {
         if (typeof attr === "undefined") {
-          element.setAttribute(propK, `${map[propK]}`);
+          elemRef.deref()?.setAttribute(propK, `${map[propK]}`);
         }
         else {
           attrs[propK] = map[propK];
@@ -173,7 +177,12 @@ export default function jsx<T extends JSX.Tag>(
       });
     }
     else if (propV instanceof Function && (isBoolAttribute(propV()) || typeof propV() === "number")) {
-      watch(() => setAttribute(element, attrs, attr, propK, propV()));
+      watch(() => {
+        const elem = elemRef.deref();
+        if (elem) {
+          setAttribute(elem, attrs, attr, propK, propV());
+        }
+      });
     }
   }
 
@@ -213,8 +222,13 @@ function mountChildren(element: HTMLElement, children: Node[]) {
       }
 
       element.append(`${ret}`);
-      const node = element.childNodes[element.childNodes.length - 1];
-      watch(() => node.textContent = `${child()}`);
+      const node = new WeakRef(element.childNodes[element.childNodes.length - 1]);
+      watch(() => {
+        const n = node.deref();
+        if (n) {
+          n.textContent = `${child()}`;
+        }
+      });
     }
     else if (Array.isArray(child)) {
       mountChildren(element, child);
@@ -225,8 +239,10 @@ function mountChildren(element: HTMLElement, children: Node[]) {
   }
 }
 
-function setClass(element: HTMLElement, map: Record<string, unknown>, propK: string, className?: string) {
+function setClass(elemRef: WeakRef<HTMLElement>, map: Record<string, unknown>, propK: string, className?: string) {
   watch(() => {
+    const element = elemRef.deref();
+    if (!element) { return }
     const classN = `${className || map[propK]}`;
     if (map[propK] === false) {
       element.classList.remove(classN);

@@ -19,7 +19,8 @@ declare global {
 export type GlobalEvent<T extends OnEventName> =
   GlobalEventHandlers[T] extends (((this: GlobalEventHandlers, ev: infer K) => any) | null | undefined) ? K : never;
 
-export type EventHandlerFn<T, E> = E extends OnEventName ? (this: T, ev: GlobalEvent<E>) => void : never;
+export type EventHandlerFn<T, E> =
+  E extends OnEventName ? (this: T, ev: GlobalEvent<E> & { currentTarget: T }) => void : never;
 
 type PrefixedFn<T, K extends string, P extends string> =
   EventHandlerFn<T, `on${RemovePrefix<K, P>}`>;

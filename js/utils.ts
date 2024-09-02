@@ -93,6 +93,9 @@ export function createElementPosition<T extends Node>(elem?: T): ElementPosition
         return this.nextSibling.before.bind(this.nextSibling);
       }
       if (this.parent) {
+        if (this.nextSibling) {
+          return this.parent.prepend.bind(this.parent);
+        }
         return this.parent.append.bind(this.parent);
       }
       throw new Error("Could not find element position");
