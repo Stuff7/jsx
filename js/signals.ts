@@ -13,7 +13,10 @@ export type Reactive<T> = T & {
 
 export type Ref<T> = [
   get: (() => T) & { listeners: Listeners<T> },
-  set: ((v: T) => void) & { byRef: (mutFn: (currentV: T) => void) => void },
+  set: ((v: T) => void) & {
+    byRef: (mutFn: (currentV: T) => void) => void;
+    byRefAsync: (mutFn: (currentV: T) => Promise<void>) => Promise<void>;
+  },
 ];
 
 export type BoolAttr = boolean | "true" | "false";
@@ -125,6 +128,10 @@ export function ref<T>(value: T = undefined as T): Ref<T> {
       {
         byRef: (mutFn: (currentV: T) => void) => {
           mutFn(v);
+          set(v);
+        },
+        byRefAsync: async (mutFn: (currentV: T) => Promise<void>) => {
+          await mutFn(v);
           set(v);
         },
       },
