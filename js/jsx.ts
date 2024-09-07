@@ -233,7 +233,7 @@ function mountChildren(element: HTMLElement, children: Node[]) {
     else if (Array.isArray(child)) {
       mountChildren(element, child);
     }
-    else {
+    else if (child != null) {
       element.append(child);
     }
   }
