@@ -32,6 +32,11 @@ export default function Transition(props: TransitionProps, slots: JSX.Slots): JS
 
   const anchor = createElementPosition();
 
+  const oldDisplay = elem.style.display;
+  // Prevent side effects like http requests from img elements
+  if (!props.$if) {
+    elem.style.display = "none";
+  }
   elem.addEventListener("mount", () => {
     if (anchor.isPositioned()) {
       return;
@@ -40,6 +45,7 @@ export default function Transition(props: TransitionProps, slots: JSX.Slots): JS
     anchor.setFromElement(elem);
     if (!props.$if) {
       elem.remove();
+      elem.style.display = oldDisplay;
     }
   }, { once: true });
 
