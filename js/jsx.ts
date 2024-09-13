@@ -114,12 +114,12 @@ export default function jsx<T extends JSX.Tag>(
         element.addEventListener(propK.slice(3), propV[0], propV[1]);
       }
     }
-    else if (propK.startsWith("win:on")) {
+    else if (propK.startsWith("g:on")) {
       if (typeof propV === "function") {
-        addWindowEventListener(element, propK.slice(6) as EventName, propV as () => void);
+        addWindowEventListener(element, propK.slice(4) as EventName, propV as () => void);
       }
       else if (propV instanceof Array) {
-        addWindowEventListener(element, propK.slice(6) as EventName, propV[0], propV[1]);
+        addWindowEventListener(element, propK.slice(4) as EventName, propV[0], propV[1]);
       }
     }
     else if (propK.startsWith("bind:")) {
@@ -196,20 +196,21 @@ export function Fragment(_: null, ...children: JSX.Children[]) {
 }
 
 function addWindowEventListener(target: EventTarget, typ: EventName, fn: () => void, opts?: AddEventListenerOptions) {
-  window.addEventListener(typ, fn, opts);
   const events = WIN_EVENTS.get(target);
+  const winEvent = typ === "resize";
+  (winEvent ? window : document).addEventListener(typ, fn, opts);
   if (!events) {
-    WIN_EVENTS.set(target, [[typ, [{ fn, opts }]]]);
+    WIN_EVENTS.set(target, [[typ, [{ fn, opts, winEvent }]]]);
     return;
   }
 
   const ev = events.find(e => e[0] === typ);
   if (!ev) {
-    events.push([typ, [{ fn, opts }]]);
+    events.push([typ, [{ fn, opts, winEvent }]]);
     return;
   }
 
-  ev[1].push({ fn, opts });
+  ev[1].push({ fn, opts, winEvent });
 }
 
 function mountChildren(element: HTMLElement, children: Node[]) {
@@ -268,7 +269,7 @@ function setAttribute(
   }
 }
 
-type AddEventParams = { fn: () => void, opts?: AddEventListenerOptions };
+type AddEventParams = { fn: () => void, opts?: AddEventListenerOptions, winEvent?: boolean };
 
 const WIN_EVENTS = new WeakMap<EventTarget, [EventName, AddEventParams[]][]>;
 const MountEvent = new CustomEvent("mount");
@@ -285,7 +286,7 @@ const mountObserver = new MutationObserver((mutations) => {
           if (events && events.length) {
             events.forEach(([e, handlers]) => {
               handlers.forEach(h => {
-                window.addEventListener(e, h.fn, h.opts);
+                (h.winEvent ? window : document).addEventListener(e, h.fn, h.opts);
               });
             });
           }
@@ -301,7 +302,7 @@ const mountObserver = new MutationObserver((mutations) => {
           if (events && events.length) {
             events.forEach(([e, handlers]) => {
               handlers.forEach(h => {
-                window.removeEventListener(e, h.fn, h.opts);
+                (h.winEvent ? window : document).removeEventListener(e, h.fn, h.opts);
               });
             });
           }

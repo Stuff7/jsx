@@ -35,7 +35,7 @@ export type SpecialProps = {
   "$if"?: boolean,
 };
 
-export type EventHandlers<T> = ExtractEvent<T, "on:"> & ExtractEvent<T, "win:on">;
+export type EventHandlers<T> = ExtractEvent<T, "on:"> & ExtractEvent<T, "g:on">;
 
 export type Union<T> = T extends any ? T : never;
 export type RefUnion<T> = T extends any ? Ref<T> : never;
