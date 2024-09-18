@@ -1,4 +1,5 @@
-import { isRef, isBoolAttribute, watch } from "~/signals";
+import { isBoolAttribute, watch } from "~/signals";
+import { EventName } from "./dom-utils";
 
 export * from "~/signals";
 
@@ -8,10 +9,10 @@ export default function jsx<T extends JSX.Tag>(
   tag: T | JSX.Component,
   attributes: { [key: string]: unknown; } | null,
   ...children: Node[]
-) {
+): Node {
   "use JSX";
   if (typeof tag === "function") {
-    if (tag === Fragment as unknown as JSX.Component) { return Fragment(null, ...children) }
+    if (tag === Fragment as unknown as JSX.Component) { return Fragment(null, ...children) as unknown as Node }
 
     const slots = { default: [] as JSX.Slots["default"] } as JSX.Slots;
     for (const c of children) {
@@ -19,8 +20,11 @@ export default function jsx<T extends JSX.Tag>(
       if (c instanceof HTMLElement && c.slot) {
         slots[c.slot] = elems;
       }
+      else if (elems instanceof Array) {
+        slots.default.push(...elems);
+      }
       else {
-        slots.default.push(...(elems instanceof Array ? elems : [elems]));
+        slots.default.push(elems);
       }
     }
 
@@ -38,66 +42,112 @@ export default function jsx<T extends JSX.Tag>(
 
   if (currentSlots && element instanceof HTMLSlotElement) {
     if (attributes?.name == null && currentSlots.default) {
-      return currentSlots.default;
+      return currentSlots.default as unknown as Node;
     }
 
     if (typeof attributes?.name === "string" && attributes.name in currentSlots) {
       return currentSlots[attributes.name];
     }
 
-    return children;
+    return children as unknown as Node;
   }
 
   const map = (attributes ?? {});
   const attrs = element as Record<string, unknown>;
+  const elemRef = new WeakRef(element);
 
   for (const propK in map) {
     const propV = map[propK] as unknown;
     const attr = attrs[propK];
 
-    if (propK === "$ref" && isRef(propV)) {
-      queueMicrotask(() => propV.value = element);
-    }
-    else if (propK === "class") {
-      setClass(element, map, propK);
-    }
-    else if (propK[0] !== "$" && !propK.includes(":") && (isBoolAttribute(propV) || typeof propV === "number")) {
-      watch(() => {
-        if (typeof attr === "undefined") {
-          element.setAttribute(propK, `${map[propK]}`);
+    if (propK[0] === "$") {
+      if (propK === "$ref") {
+        if (propV instanceof Function) {
+          queueMicrotask(() => propV(element));
         }
         else {
-          attrs[propK] = map[propK];
+          queueMicrotask(() => map[propK] = element);
         }
-      });
+      }
+      else if (propK === "$if") {
+        queueMicrotask(() => {
+          const parent = element.parentElement;
+          const prevSibling = element.previousSibling;
+          const nextSibling = element.nextSibling;
+
+          watch(() => {
+            const elem = elemRef.deref();
+            if (!elem) { return }
+
+            if (map.$if) {
+              if (document.contains(elem)) {
+                return;
+              }
+              if (prevSibling && prevSibling.parentElement) {
+                prevSibling.after(elem);
+              }
+              else if (nextSibling && nextSibling.parentElement) {
+                nextSibling.before(elem);
+              }
+              else if (parent) {
+                parent.append(elem);
+              }
+            }
+            else if (document.contains(elem)) {
+              elem.remove();
+            }
+            else {
+              queueMicrotask(() => elem.remove());
+            }
+          });
+        });
+      }
     }
     else if (propK.startsWith("class:")) {
-      setClass(element, map, propK, propK.slice(6));
+      setClass(elemRef, map, propK, propK.slice(6));
     }
-    else if (propK.startsWith("on:") && typeof propV === "function") {
-      element.addEventListener(propK.slice(3), propV as EventListenerOrEventListenerObject);
+    else if (propK.startsWith("on:")) {
+      if (typeof propV === "function") {
+        element.addEventListener(propK.slice(3), propV as () => void);
+      }
+      else if (propV instanceof Array) {
+        element.addEventListener(propK.slice(3), propV[0], propV[1]);
+      }
+    }
+    else if (propK.startsWith("g:on")) {
+      if (typeof propV === "function") {
+        addWindowEventListener(element, propK.slice(4) as EventName, propV as () => void);
+      }
+      else if (propV instanceof Array) {
+        addWindowEventListener(element, propK.slice(4) as EventName, propV[0], propV[1]);
+      }
     }
     else if (propK.startsWith("bind:")) {
       const k = propK.slice(5);
-      if (!isRef(propV)) {
+      if (!(propV instanceof Array)) {
         watch(() => attrs[k] = map[propK]);
         break;
       }
 
-      watch(() => attrs[k] = propV.value);
+      const [get, set] = propV;
+      if (!(get instanceof Function) || !(set instanceof Function)) {
+        break;
+      }
+
+      watch(() => attrs[k] = get());
 
       if (k === "value") {
-        element.addEventListener("input", () => propV.value = attrs[k]);
+        element.addEventListener("input", () => set(attrs[k]));
       }
       else {
-        element.addEventListener("change", () => propV.value = attrs[k]);
+        element.addEventListener("change", () => set(attrs[k]));
       }
     }
     else if (propK.startsWith("style:")) {
       const k = propK.slice(6);
       const updateStyle = (v: unknown) => element.style.setProperty(k, `${v}`);
-      if (isRef(propV)) {
-        watch(() => updateStyle(propV.value));
+      if (propV instanceof Function) {
+        watch(() => updateStyle(propV()));
       }
       else {
         watch(() => updateStyle(map[propK]));
@@ -106,50 +156,37 @@ export default function jsx<T extends JSX.Tag>(
     else if (propK.startsWith("var:")) {
       const k = propK.slice(4);
       const updateStyle = (v: unknown) => element.style.setProperty(`--${k}`, `${v}`);
-      if (isRef(propV)) {
-        watch(() => updateStyle(propV.value));
+      if (propV instanceof Function) {
+        watch(() => updateStyle(propV()));
       }
       else {
         watch(() => updateStyle(map[propK]));
       }
     }
-    else if (isRef(propV) && (isBoolAttribute(propV.value) || typeof propV.value === "number")) {
-      watch(() => setAttribute(element, attrs, attr, propK, propV.value));
+    else if (propK === "class") {
+      setClass(elemRef, map, propK);
+    }
+    else if (isBoolAttribute(propV) || typeof propV === "number") {
+      watch(() => {
+        if (typeof attr === "undefined") {
+          elemRef.deref()?.setAttribute(propK, `${map[propK]}`);
+        }
+        else {
+          attrs[propK] = map[propK];
+        }
+      });
+    }
+    else if (propV instanceof Function && (isBoolAttribute(propV()) || typeof propV() === "number")) {
+      watch(() => {
+        const elem = elemRef.deref();
+        if (elem) {
+          setAttribute(elem, attrs, attr, propK, propV());
+        }
+      });
     }
   }
 
   mountChildren(element, children);
-
-  if (typeof attributes?.$if === "boolean") {
-    queueMicrotask(() => {
-      const parent = element.parentElement;
-      const prevSibling = element.previousSibling;
-      const nextSibling = element.nextSibling;
-
-      watch(() => {
-        if (attributes.$if) {
-          if (document.contains(element)) {
-            return;
-          }
-          if (prevSibling && prevSibling.parentElement) {
-            prevSibling.after(element);
-          }
-          else if (nextSibling && nextSibling.parentElement) {
-            nextSibling.before(element);
-          }
-          else if (parent) {
-            parent.append(element);
-          }
-        }
-        else if (document.contains(element)) {
-          element.remove();
-        }
-        else {
-          queueMicrotask(() => element.remove());
-        }
-      });
-    });
-  }
 
   return element;
 }
@@ -158,29 +195,55 @@ export function Fragment(_: null, ...children: JSX.Children[]) {
   return children.flat(Infinity as 1);
 }
 
+function addWindowEventListener(target: EventTarget, typ: EventName, fn: () => void, opts?: AddEventListenerOptions) {
+  const events = WIN_EVENTS.get(target);
+  const winEvent = typ === "resize";
+  (winEvent ? window : document).addEventListener(typ, fn, opts);
+  if (!events) {
+    WIN_EVENTS.set(target, [[typ, [{ fn, opts, winEvent }]]]);
+    return;
+  }
+
+  const ev = events.find(e => e[0] === typ);
+  if (!ev) {
+    events.push([typ, [{ fn, opts, winEvent }]]);
+    return;
+  }
+
+  ev[1].push({ fn, opts, winEvent });
+}
+
 function mountChildren(element: HTMLElement, children: Node[]) {
   for (const child of children) {
-    if (isRef(child)) {
-      element.append(`${child.value}`);
-      const node = element.childNodes[element.childNodes.length - 1];
-      watch(() => node.textContent = `${child.value}`);
-    }
-    else if (child instanceof Function) {
-      element.append(`${child()}`);
-      const node = element.childNodes[element.childNodes.length - 1];
-      watch(() => node.textContent = `${child()}`);
+    if (child instanceof Function) {
+      const ret = child();
+      if (ret instanceof Element) {
+        element.append(ret);
+        continue;
+      }
+
+      element.append(`${ret}`);
+      const node = new WeakRef(element.childNodes[element.childNodes.length - 1]);
+      watch(() => {
+        const n = node.deref();
+        if (n) {
+          n.textContent = `${child()}`;
+        }
+      });
     }
     else if (Array.isArray(child)) {
       mountChildren(element, child);
     }
-    else {
+    else if (child != null) {
       element.append(child);
     }
   }
 }
 
-function setClass(element: HTMLElement, map: Record<string, unknown>, propK: string, className?: string) {
+function setClass(elemRef: WeakRef<HTMLElement>, map: Record<string, unknown>, propK: string, className?: string) {
   watch(() => {
+    const element = elemRef.deref();
+    if (!element) { return }
     const classN = `${className || map[propK]}`;
     if (map[propK] === false) {
       element.classList.remove(classN);
@@ -206,6 +269,9 @@ function setAttribute(
   }
 }
 
+type AddEventParams = { fn: () => void, opts?: AddEventListenerOptions, winEvent?: boolean };
+
+const WIN_EVENTS = new WeakMap<EventTarget, [EventName, AddEventParams[]][]>;
 const MountEvent = new CustomEvent("mount");
 const UnmountEvent = new CustomEvent("unmount");
 
@@ -214,22 +280,48 @@ const mountObserver = new MutationObserver((mutations) => {
     if (mutation.type !== "childList") { return }
 
     for (const node of mutation.addedNodes) {
-      queueMicrotask(() => sendEventDeep(node, MountEvent));
+      queueMicrotask(() => {
+        iterChildrenDeep(node, node => {
+          const events = WIN_EVENTS.get(node);
+          if (events && events.length) {
+            events.forEach(([e, handlers]) => {
+              handlers.forEach(h => {
+                (h.winEvent ? window : document).addEventListener(e, h.fn, h.opts);
+              });
+            });
+          }
+
+          node.dispatchEvent(MountEvent);
+        });
+      });
     }
     for (const node of mutation.removedNodes) {
-      queueMicrotask(() => sendEventDeep(node, UnmountEvent));
+      queueMicrotask(() => {
+        iterChildrenDeep(node, node => {
+          const events = WIN_EVENTS.get(node);
+          if (events && events.length) {
+            events.forEach(([e, handlers]) => {
+              handlers.forEach(h => {
+                (h.winEvent ? window : document).removeEventListener(e, h.fn, h.opts);
+              });
+            });
+          }
+
+          node.dispatchEvent(UnmountEvent);
+        });
+      });
     }
   });
 });
 
-function sendEventDeep(node: Node, event: CustomEvent) {
+function iterChildrenDeep(node: Node, fn: (node: EventTarget) => void) {
   if (node.nodeType === node.ELEMENT_NODE) {
     for (const c of (node as HTMLElement).getElementsByTagName("*")) {
-      c.dispatchEvent(event);
+      fn(c);
     }
   }
 
-  node.dispatchEvent(event);
+  fn(node);
 }
 
 mountObserver.observe(document.body, { childList: true, subtree: true });

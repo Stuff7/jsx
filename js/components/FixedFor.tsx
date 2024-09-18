@@ -1,8 +1,8 @@
-import { Reactive, reactive } from "~/signals";
+import { isReactiveObject, reactive, ref, watch } from "~/signals";
 
-type ForProps<T extends object> = {
+type ForProps<T> = {
   each: T[],
-  do: (item: T, i: number) => JSX.Element,
+  do: (item: () => T, i: number) => JSX.Element,
 };
 
 /**
@@ -14,12 +14,22 @@ type ForProps<T extends object> = {
  *
  * @note If you need to render a dynamically-sized array use <For> instead.
  */
-export default function FixedFor<T extends object>(props: ForProps<T>): JSX.Element {
-  for (let i = 0; i < props.each.length; i++) {
-    props.each[i] = reactive(props.each[i]);
-  }
+export default function FixedFor<T>(props: ForProps<T>): JSX.Element {
+  return props.each.map((_, i) => {
+    const [item, setItem] = ref(props.each[i]);
 
-  return props.each.map((item, i) => {
-    return props.do(item as Reactive<T>, i);
+    const currentItem = item();
+    if (currentItem && typeof currentItem === "object" && !isReactiveObject(currentItem)) {
+      reactive(currentItem);
+    }
+
+    watch(() => {
+      const newItem = props.each[i];
+      if (item() !== newItem) {
+        setItem(newItem);
+      }
+    });
+
+    return props.do(item, i);
   }) as unknown as JSX.Element;
 }

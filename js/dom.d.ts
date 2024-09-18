@@ -1,37 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { BoolAttr, ReactiveAttr, Ref } from "~/signals";
-import { Properties, PropertiesHyphen } from "csstype";
-
-type RemovePrefix<T, Prefix extends string> = T extends `${Prefix}${infer S}` ? S : T;
-type OnEventName = Exclude<keyof GlobalEventHandlers, `${string}EventListener`>;
-type EventName = RemovePrefix<OnEventName, "on">;
-
-type ExtractEvent<T extends OnEventName> =
-  GlobalEventHandlers[T] extends (((this: GlobalEventHandlers, ev: infer K) => any) | null) ? K : never;
-
-type SpecialProps = {
-  "$if"?: boolean,
-};
-
-type EventHandler<T> = {
-  [K in `on:${EventName}`]: ((this: T, ev: ExtractEvent<`on${RemovePrefix<K, "on:">}`>) => void) | null;
-};
-
-type Union<T> = T extends any ? T : never;
-type RefUnion<T> = T extends any ? Ref<T> : never;
-
-type StripPrefix<T, K, Prefix extends string> = RemovePrefix<K, Prefix> extends keyof T ?
-  T[RemovePrefix<K, Prefix>] : never;
-
-type StyleProps = {
-  [K in `style:${keyof PropertiesHyphen}`]?: RefUnion<StripPrefix<PropertiesHyphen, K, "style:">> | string;
-} & { [K in `var:${string}`]?: string } & { [K in `class:${string}`]?: BoolAttr };
-
-type Binders<T> = T & (
-  keyof T extends string ? {
-    [K in `bind:${keyof T}`]?: RefUnion<StripPrefix<T, K, "bind:">>;
-  } & StyleProps : never
-);
+import { BoolAttr, ReactiveAttr } from "./signals";
+import { Binders, CSSProperties, SpecialProps, EventHandlers } from "./dom-utils";
 
 type HTMLAttributeAnchorTarget =
   | "_self"
@@ -873,12 +842,10 @@ type AriaRole =
   | "treeitem"
   | (string & NonNullable<unknown>);
 
-type DOMAttributes<T> = SpecialProps & EventHandler<T> & {
+type DOMAttributes<T> = SpecialProps & EventHandlers<T> & {
   children?: Node | Node[] | undefined;
   innerHTML?: string;
 };
-
-type CSSProperties = Properties;
 
 interface SVGAttributes<T> extends AriaAttributes, DOMAttributes<T> {
   // Attributes which are also defined in HTMLAttributes
@@ -1157,7 +1124,7 @@ interface SVGAttributes<T> extends AriaAttributes, DOMAttributes<T> {
 }
 
 export interface HTMLAttributes<T> extends AriaAttributes, Partial<DOMAttributes<T>> {
-  $ref?: { value: T | null },
+  $ref?: ((ref: T) => void) | T | null,
   // Standard HTML Attributes
   accesskey?: string | undefined;
   autofocus?: boolean | undefined;

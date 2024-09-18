@@ -1,7 +1,7 @@
 const context = [] as Running<never>[];
 
 type Running<T> = {
-  execute<K extends keyof T>(key: K, value: T[K]): void;
+  execute(value: T): void;
   dependencies: Set<Listeners<T>>;
 };
 
@@ -11,40 +11,24 @@ export type Reactive<T> = T & {
   listeners: Listeners<T>,
 };
 
-export type Ref<T> = Reactive<{
-  value: T,
-}>;
+export type Ref<T> = [
+  get: (() => T) & { listeners: Listeners<T> },
+  set: ((v: T) => void) & {
+    byRef: (mutFn: (currentV: T) => void) => void;
+    byRefAsync: (mutFn: (currentV: T) => Promise<void>) => Promise<void>;
+  },
+];
 
 export type BoolAttr = boolean | "true" | "false";
 
 export type ReactiveAttr = Ref<string> | Ref<boolean> | string | boolean;
 
-function hookListeners<T>(data: Reactive<T>) {
-  Object.defineProperty(data, "listeners", {
-    value: new Set(),
-    enumerable: false,
-    configurable: true,
-  });
-}
-
-export function ref<T>(value: T): Ref<T> {
-  const p = { value } as Ref<T>;
-  hookListeners(p);
-  return new Proxy<Ref<T>>(p, { get, set });
-}
-
-export function reactive<T extends object>(props: T): Reactive<T> {
-  hookListeners(props as Reactive<T>);
-  return new Proxy<Reactive<T>>(props as Reactive<T>, { get, set });
-}
-
-export function watch<T>(fn: Running<T>["execute"], deps: Reactive<unknown>[] = []) {
-  const execute: Running<T>["execute"] = (key, value) => {
+export function watch<T>(fn: Running<T>["execute"]) {
+  const execute: Running<T>["execute"] = (value) => {
     cleanup(running);
     context.push(running);
     try {
-      fn(key, value);
-      deps.forEach(dep => dep.listeners);
+      fn(value);
     }
     finally {
       context.pop();
@@ -56,15 +40,15 @@ export function watch<T>(fn: Running<T>["execute"], deps: Reactive<unknown>[] = 
     dependencies: new Set(),
   };
 
-  execute("" as keyof T, "" as T[keyof T]);
+  execute(undefined as T);
 }
 
 /**
  * Works like `watch` but it only subscribes to the specified dependencies (deps)
  * and ignores any other accesses from within the callback (fn).
  * */
-export function watchOnly<T>(deps: Reactive<unknown>[], fn: Running<T>["execute"]) {
-  const execute: Running<T>["execute"] = (key, value) => {
+export function watchOnly<T>(deps: ({ listeners: Listeners<unknown> })[], fn: Running<T>["execute"]) {
+  const execute: Running<T>["execute"] = (value) => {
     cleanup(running);
 
     deps.forEach(dep => {
@@ -72,7 +56,7 @@ export function watchOnly<T>(deps: Reactive<unknown>[], fn: Running<T>["execute"
     });
 
     try {
-      fn(key, value);
+      fn(value);
     }
     finally {
       context.pop();
@@ -84,28 +68,108 @@ export function watchOnly<T>(deps: Reactive<unknown>[], fn: Running<T>["execute"
     dependencies: new Set(),
   };
 
-  execute("" as keyof T, "" as T[keyof T]);
+  execute(undefined as T);
 }
 
-export function computed<T>(fn: () => T) {
-  const c = ref(fn());
-  watch(() => c.value = fn());
-  return c;
+/**
+ * Works like `watchOnly` but only watches the dependencies used in `depsFn`.
+ * */
+export function watchFn<T>(deps: () => unknown, fn: Running<T>["execute"]) {
+  const execute: Running<T>["execute"] = (value) => {
+    cleanup(running);
+    context.push(running);
+
+    try {
+      deps();
+    }
+    finally {
+      context.pop();
+    }
+
+    try {
+      fn(value);
+    }
+    finally {
+      context.pop();
+    }
+  };
+
+  const running: Running<T> = {
+    execute,
+    dependencies: new Set(),
+  };
+
+  execute(undefined as T);
 }
 
-function get<T, R extends Reactive<T>>(target: R, key: string | symbol) {
-  const running = context[context.length - 1];
-  if (running) { subscribe(running, target.listeners) }
-  return target[key];
+export function ref<T>(value: T = undefined as T): Ref<T> {
+  const listeners: Listeners<T> = new Set;
+  let v = value;
+
+  const get = () => {
+    const running = context[context.length - 1];
+    if (running) { subscribe(running, listeners) }
+    return v;
+  };
+
+  const set = (newV: T) => {
+    const prev = v;
+    v = newV;
+
+    for (const sub of [...listeners]) {
+      sub.execute(prev);
+    }
+  };
+
+  return [
+    Object.assign(get, { listeners }),
+    Object.assign(
+      set,
+      {
+        byRef: (mutFn: (currentV: T) => void) => {
+          mutFn(v);
+          set(v);
+        },
+        byRefAsync: async (mutFn: (currentV: T) => Promise<void>) => {
+          await mutFn(v);
+          set(v);
+        },
+      },
+    ),
+  ];
 }
 
-function set<T, R extends Reactive<T>>(target: R, key: string | symbol, val: never) {
-  target[key] = val;
+export function reactive<T extends object>(objValue: T): Reactive<T> {
+  const obj = objValue as Reactive<T>;
+  Object.defineProperty(obj, "listeners", {
+    value: new Set(),
+    enumerable: false,
+    configurable: true,
+  });
 
-  for (const sub of [...target.listeners]) {
-    sub.execute(key as keyof T, val);
+  for (const k in obj) {
+    let v = obj[k];
+    Object.defineProperty(obj, k, {
+      get: () => {
+        const running = context[context.length - 1];
+        if (running) { subscribe(running, obj.listeners) }
+        return v;
+      },
+      set: (newV) => {
+        const prev = v;
+        v = newV;
+        for (const sub of [...obj.listeners]) {
+          sub.execute(prev);
+        }
+      },
+    });
   }
-  return true;
+
+  return obj;
+}
+
+export function isReactiveObject<T extends object>(value: T): value is Reactive<T> {
+  return "listeners" in value && value.listeners instanceof Set;
 }
 
 function subscribe<T>(running: Running<T>, subscriptions: Listeners<T>) {
@@ -118,14 +182,6 @@ function cleanup<T>(running: Running<T>) {
     dep.delete(running);
   }
   running.dependencies.clear();
-}
-
-export function isReactive(value: unknown): value is Reactive<object> {
-  return value instanceof Object && "listeners" in value && value.listeners instanceof Set;
-}
-
-export function isRef(value: unknown): value is Ref<unknown> {
-  return isReactive(value) && "value" in value;
 }
 
 export function isBoolAttribute(value: unknown): value is BoolAttr {

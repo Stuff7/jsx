@@ -4,5 +4,5 @@
     "jsxFactory": "jsx",
     "jsxFragmentFactory": "Fragment"
   },
-  "files": ["./dist/global.d.ts"],
+  "files": ["./dist/types/global.d.ts"],
 }

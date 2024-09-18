@@ -34,7 +34,8 @@ pub fn parse<I: Iterator<Item = PathBuf>>(paths: I) -> Result<(), ParserError> {
 
   let q_src = if let Some(jsx_ident) = jsx_ident {
     &Q_PROPS.replace("jsx", jsx_ident)
-  } else {
+  }
+  else {
     Q_PROPS
   };
 
@@ -67,7 +68,8 @@ pub fn parse<I: Iterator<Item = PathBuf>>(paths: I) -> Result<(), ParserError> {
 
         let node_type = val.node.grammar_name();
         if node_type == "identifier" || node_type == "member_expression" || node_type == "subscript_expression" {
-          outbuf.extend_from_slice(format!(",set {sbo}{key_txt}{sbc}(v){{{val_txt}=v}}").as_bytes());
+          let param_ident = if val_txt.len() > 1 || val_txt.as_bytes()[0] != b'a' { 'a' } else { 'b' };
+          outbuf.extend_from_slice(format!(",set {sbo}{key_txt}{sbc}({param_ident}){{{val_txt}={param_ident}}}").as_bytes());
         }
       }
 

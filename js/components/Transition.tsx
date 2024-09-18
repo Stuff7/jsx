@@ -1,4 +1,4 @@
-import { computed, watch } from "~/jsx";
+import { watch } from "~/jsx";
 import { createElementPosition } from "~/utils";
 
 type TransitionProps = {
@@ -14,15 +14,15 @@ export default function Transition(props: TransitionProps, slots: JSX.Slots): JS
     return slots.default as unknown as JSX.Element;
   }
 
-  const name = computed(() => props.name || "jsx");
+  const name = () => props.name || "jsx";
 
-  const enterActive = computed(() => `${name.value}-enter-active`);
-  const enterFrom = computed(() => `${name.value}-enter-from`);
-  const enterTo = computed(() => `${name.value}-enter-to`);
+  const enterActive = () => `${name()}-enter-active`;
+  const enterFrom = () => `${name()}-enter-from`;
+  const enterTo = () => `${name()}-enter-to`;
 
-  const leaveActive = computed(() => `${name.value}-leave-active`);
-  const leaveFrom = computed(() => `${name.value}-leave-from`);
-  const leaveTo = computed(() => `${name.value}-leave-to`);
+  const leaveActive = () => `${name()}-leave-active`;
+  const leaveFrom = () => `${name()}-leave-from`;
+  const leaveTo = () => `${name()}-leave-to`;
 
   function nextFrame() {
     return new Promise(res => {
@@ -32,7 +32,12 @@ export default function Transition(props: TransitionProps, slots: JSX.Slots): JS
 
   const anchor = createElementPosition();
 
-  function onMount() {
+  const oldDisplay = elem.style.display;
+  // Prevent side effects like http requests from img elements
+  if (!props.$if) {
+    elem.style.display = "none";
+  }
+  elem.addEventListener("mount", () => {
     if (anchor.isPositioned()) {
       return;
     }
@@ -40,45 +45,62 @@ export default function Transition(props: TransitionProps, slots: JSX.Slots): JS
     anchor.setFromElement(elem);
     if (!props.$if) {
       elem.remove();
+      elem.style.display = oldDisplay;
     }
-
-    elem.removeEventListener("mount", onMount);
-  }
-
-  elem.addEventListener("mount", onMount);
+  }, { once: true });
 
   watch(async () => {
+    if (elem.classList.length) {
+      if (!props.$if && (
+        elem.classList.contains(enterFrom()) ||
+        elem.classList.contains(enterActive()) ||
+        elem.classList.contains(enterTo())
+      )) {
+        await nextFrame();
+        removeClasses();
+        elem.remove();
+      }
+      else if (props.$if && (
+        elem.classList.contains(leaveFrom()) ||
+        elem.classList.contains(leaveTo()) ||
+        elem.classList.contains(leaveActive())
+      )) {
+        await nextFrame();
+        removeClasses();
+        elem.remove();
+      }
+    }
+
     if (props.$if) {
-      removeClasses();
       if (elem.isConnected) { return }
-      elem.classList.add(enterFrom.value);
-      elem.classList.add(enterActive.value);
+      elem.classList.add(enterFrom());
+      elem.classList.add(enterActive());
 
       anchor.insertNode(elem);
       await nextFrame();
 
-      elem.classList.remove(enterFrom.value);
-      elem.classList.add(enterTo.value);
+      elem.classList.remove(enterFrom());
+      elem.classList.add(enterTo());
     }
     else if (elem.isConnected) {
-      elem.classList.add(leaveFrom.value);
-      elem.classList.add(leaveActive.value);
+      elem.classList.add(leaveFrom());
+      elem.classList.add(leaveActive());
 
       await nextFrame();
 
-      elem.classList.remove(leaveFrom.value);
-      elem.classList.add(leaveTo.value);
+      elem.classList.remove(leaveFrom());
+      elem.classList.add(leaveTo());
     }
   });
 
   function removeClasses() {
-    elem.classList.remove(enterActive.value);
-    elem.classList.remove(enterFrom.value);
-    elem.classList.remove(enterTo.value);
+    elem.classList.remove(enterActive());
+    elem.classList.remove(enterFrom());
+    elem.classList.remove(enterTo());
 
-    elem.classList.remove(leaveActive.value);
-    elem.classList.remove(leaveFrom.value);
-    elem.classList.remove(leaveTo.value);
+    elem.classList.remove(leaveActive());
+    elem.classList.remove(leaveFrom());
+    elem.classList.remove(leaveTo());
   }
 
   elem.addEventListener("transitionend", () => {
