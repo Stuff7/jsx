@@ -8,6 +8,10 @@ name = "jsx"
 path = "src/jsx_params.rs"
 
 [[bin]]
+name = "jsx_template"
+path = "src/jsx_template.rs"
+
+[[bin]]
 name = "ts_imports"
 path = "src/ts_imports.rs"
 
