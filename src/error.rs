@@ -14,6 +14,8 @@ pub enum ParserError {
   #[error("Missing directory path")]
   MissingDir,
   #[error(transparent)]
+  Fmt(#[from] fmt::Error),
+  #[error(transparent)]
   Io(#[from] io::Error),
   #[error(transparent)]
   Language(#[from] LanguageError),
