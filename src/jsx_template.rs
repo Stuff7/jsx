@@ -181,11 +181,10 @@ impl<'a> JsxTemplate<'a> {
 
     if self.is_self_closing {
       write!(f, "/>")?;
-    }
-    else {
-      write!(f, ">")?;
+      return Ok(f);
     }
 
+    write!(f, ">")?;
     for child in &self.children {
       match child.kind {
         "jsx_self_closing_element" | "jsx_element" => {
@@ -207,10 +206,7 @@ impl<'a> JsxTemplate<'a> {
         _ => write!(f, "<!>")?,
       }
     }
-
-    if !self.is_self_closing {
-      write!(f, "</{}>", self.tag)?;
-    }
+    write!(f, "</{}>", self.tag)?;
 
     Ok(f)
   }
