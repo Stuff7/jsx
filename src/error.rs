@@ -11,6 +11,8 @@ use std::{
 pub enum ParserError {
   #[error("Failed to parse")]
   Parse,
+  #[error("[{ln}:{col}] Fatal: {msg}")]
+  ParseMsg { ln: usize, col: usize, msg: &'static str },
   #[error("Missing directory path")]
   MissingDir,
   #[error(transparent)]
@@ -30,5 +32,16 @@ pub enum ParserError {
 impl Debug for ParserError {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(f, "{self}")
+  }
+}
+
+impl ParserError {
+  pub fn msg(msg: &'static str, node: tree_sitter::Node<'_>) -> Self {
+    let range = node.range().start_point;
+    Self::ParseMsg {
+      msg,
+      ln: range.row,
+      col: range.column,
+    }
   }
 }
