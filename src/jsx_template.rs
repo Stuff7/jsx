@@ -20,34 +20,6 @@ fn main() -> Result<(), ParserError> {
   Ok(())
 }
 
-struct JsxParser {
-  parser: Parser,
-  query: Query,
-  cursor: QueryCursor,
-}
-
-impl JsxParser {
-  fn new() -> Result<Self, ParserError> {
-    let javascript = tree_sitter_javascript::language();
-    let mut parser = Parser::new();
-    parser.set_language(&javascript)?;
-
-    Ok(Self {
-      parser,
-      query: Query::new(&javascript, Q_JSX_TEMPLATE)?,
-      cursor: QueryCursor::new(),
-    })
-  }
-
-  fn tree<'a>(&'a mut self, source: &'a [u8]) -> Result<Tree, ParserError> {
-    self.parser.parse(source, None).ok_or(ParserError::Parse)
-  }
-
-  fn parse<'a>(&'a mut self, node: Node<'a>, source: &'a [u8]) -> Result<QueryMatches<&'a [u8], &'a [u8]>, ParserError> {
-    Ok(self.cursor.matches(&self.query, node, source))
-  }
-}
-
 pub fn parse<I: Iterator<Item = PathBuf>>(paths: I) -> Result<(), ParserError> {
   let mut parser = JsxParser::new()?;
   let mut source = Vec::new();
@@ -75,6 +47,34 @@ pub fn parse<I: Iterator<Item = PathBuf>>(paths: I) -> Result<(), ParserError> {
   }
 
   Ok(())
+}
+
+struct JsxParser {
+  parser: Parser,
+  query: Query,
+  cursor: QueryCursor,
+}
+
+impl JsxParser {
+  fn new() -> Result<Self, ParserError> {
+    let javascript = tree_sitter_javascript::language();
+    let mut parser = Parser::new();
+    parser.set_language(&javascript)?;
+
+    Ok(Self {
+      parser,
+      query: Query::new(&javascript, Q_JSX_TEMPLATE)?,
+      cursor: QueryCursor::new(),
+    })
+  }
+
+  fn tree<'a>(&'a mut self, source: &'a [u8]) -> Result<Tree, ParserError> {
+    self.parser.parse(source, None).ok_or(ParserError::Parse)
+  }
+
+  fn parse<'a>(&'a mut self, node: Node<'a>, source: &'a [u8]) -> Result<QueryMatches<&'a [u8], &'a [u8]>, ParserError> {
+    Ok(self.cursor.matches(&self.query, node, source))
+  }
 }
 
 const VAR_PREF: &str = "_jsx$";
@@ -430,7 +430,7 @@ fn replace_jsx<'a>(node: Node<'_>, templates: &[JsxTemplate], value: &'a str) ->
     });
 
   let mut v = None;
-  for (i, elem) in elems.enumerate() {
+  for elem in elems {
     let v = v.get_or_insert_with(|| value.to_string());
     let parts = elem.parts(templates)?;
     v.replace_range(elem.start - range.start..elem.end - range.start, &parts.create_fn);
