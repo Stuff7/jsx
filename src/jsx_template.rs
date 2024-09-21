@@ -3,6 +3,7 @@ mod error;
 
 use error::ParserError;
 use std::{
+  borrow::Cow,
   fmt::{Debug, Write},
   fs::{self},
   io::Read,
@@ -42,8 +43,8 @@ impl JsxParser {
     self.parser.parse(source, None).ok_or(ParserError::Parse)
   }
 
-  fn parse<'a>(&'a mut self, tree: &'a Tree, source: &'a [u8]) -> Result<QueryMatches<&'a [u8], &'a [u8]>, ParserError> {
-    Ok(self.cursor.matches(&self.query, tree.root_node(), source))
+  fn parse<'a>(&'a mut self, node: Node<'a>, source: &'a [u8]) -> Result<QueryMatches<&'a [u8], &'a [u8]>, ParserError> {
+    Ok(self.cursor.matches(&self.query, node, source))
   }
 }
 
@@ -57,24 +58,18 @@ pub fn parse<I: Iterator<Item = PathBuf>>(paths: I) -> Result<(), ParserError> {
     file.read_to_end(&mut source)?;
 
     let tree = parser.tree(&source)?;
-    let matches = parser.parse(&tree, &source)?;
+    let matches = parser.parse(tree.root_node(), &source)?;
 
     let templates = matches
-      .map(|m| JsxTemplate::parse(m.captures, &source))
+      .enumerate()
+      .map(|(i, m)| JsxTemplate::parse(i, m.captures, &source))
       .collect::<Result<Vec<_>, ParserError>>()?;
 
-    let mut id = 0;
     for template in &templates {
       if template.is_root {
-        let mut var_idx = 0;
         println!("====================================================");
-        println!(
-          "const {VAR_PREF}templ{} = {VAR_PREF}template(`{}`);\n",
-          id,
-          template.generate_template_string(&templates)?
-        );
-        println!("{}\n\n", template.generate_fn(id, &mut var_idx, &templates)?);
-        id += 1;
+        let parts = template.parts(&templates)?;
+        println!("{};\n\n{};\n\n", parts.imports, parts.create_fn);
       }
     }
   }
@@ -90,6 +85,7 @@ struct Prop<'a> {
   kind: &'a str,
   key: &'a str,
   value: Option<&'a str>,
+  node: Node<'a>,
 }
 
 #[derive(Debug)]
@@ -103,6 +99,7 @@ struct Child<'a> {
 
 #[derive(Debug)]
 struct JsxTemplate<'a> {
+  id: usize,
   start: usize,
   end: usize,
   tag: &'a str,
@@ -116,7 +113,8 @@ impl<'a> JsxTemplate<'a> {
   fn is_component(&self) -> bool {
     self.tag.chars().next().is_some_and(|c| c.is_ascii_uppercase())
   }
-  fn parse(captures: &'a [QueryCapture<'a>], source: &'a [u8]) -> Result<Self, ParserError> {
+
+  fn parse(id: usize, captures: &'a [QueryCapture<'a>], source: &'a [u8]) -> Result<Self, ParserError> {
     enum CaptureIdx {
       Tag,
       Key,
@@ -126,6 +124,7 @@ impl<'a> JsxTemplate<'a> {
     }
 
     let mut ret = Self {
+      id: 0,
       start: 0,
       end: 0,
       tag: "",
@@ -145,12 +144,14 @@ impl<'a> JsxTemplate<'a> {
             kind: cap.node.kind(),
             key: cap.node.utf8_text(source)?,
             value: None,
+            node: cap.node,
           });
         }
         x if x == CaptureIdx::Value as u32 => {
           if let Some(p) = ret.props.last_mut() {
             p.kind = cap.node.kind();
             p.value = Some(cap.node.utf8_text(source)?);
+            p.node = cap.node;
           }
         }
         x if x == CaptureIdx::Children as u32 => ret.children.push(Child {
@@ -173,6 +174,7 @@ impl<'a> JsxTemplate<'a> {
             .node
             .parent()
             .is_some_and(|n| matches!(n.kind(), "jsx_element" | "jsx_self_closing_element"));
+          ret.id = id;
         }
         _ => (),
       }
@@ -250,10 +252,15 @@ impl<'a> JsxTemplate<'a> {
           write!(f, "{}: \"{}\", ", prop.key, prop.value.unwrap())?;
         }
         else if is_reactive_kind(prop.kind) {
-          write!(f, "get {}() {{ return {} }}, ", prop.key, prop.value.unwrap())?;
+          write!(
+            f,
+            "get {}() {{ return {} }}, ",
+            prop.key,
+            replace_jsx(prop.node, templates, prop.value.unwrap())?
+          )?;
         }
         else if let Some(value) = prop.value {
-          write!(f, "{}: {}, ", prop.key, value)?;
+          write!(f, "{}: {}, ", prop.key, replace_jsx(prop.node, templates, value)?)?;
         }
         else {
           write!(f, "{}: true, ", prop.key)?;
@@ -264,28 +271,28 @@ impl<'a> JsxTemplate<'a> {
 
     for child in &self.children {
       if is_reactive_kind(child.kind) {
-        write!(f, ", () => {}", child.value)?;
+        write!(f, ", () => {}", replace_jsx(child.node, templates, child.value)?)?;
       }
       else {
-        write!(f, ", {}", child.value)?;
+        write!(f, ", {}", replace_jsx(child.node, templates, child.value)?)?;
       }
     }
-    writeln!(f, ");")?;
+    write!(f, ")")?;
 
     Ok(f)
   }
 
-  fn generate_fn(&self, id: isize, var_idx: &mut usize, templates: &[JsxTemplate]) -> Result<String, ParserError> {
+  fn generate_fn(&self, var_idx: &mut usize, templates: &[JsxTemplate]) -> Result<(String, String), ParserError> {
     if self.is_component() {
-      return self.generate_component_call(templates);
+      return Ok((self.generate_component_call(templates)?, String::new()));
     }
 
-    let mut f = String::new();
+    let mut elem_vars = String::new();
+    let mut elem_setup = String::new();
     let mut var = format!("{VAR_PREF}el{}", *var_idx);
 
-    if id >= 0 {
-      writeln!(f, "(() => {{")?;
-      writeln!(f, "const {var} = {VAR_PREF}templ{id}();")?;
+    if self.is_root {
+      writeln!(elem_vars, "const {var} = {VAR_PREF}templ{}();", self.id)?;
     }
 
     for prop in &self.props {
@@ -293,25 +300,25 @@ impl<'a> JsxTemplate<'a> {
       else {
         continue;
       };
+      let value = replace_jsx(prop.node, templates, value)?;
 
       if let Some(event_name) = prop.key.strip_prefix("on:") {
-        writeln!(f, "{var}.addEventListener(\"{event_name}\", {value})")?;
+        writeln!(elem_setup, "{var}.addEventListener(\"{event_name}\", {value});")?;
       }
       else if prop.key == "$ref" {
-        writeln!(f, "{value} = {var};")?;
+        writeln!(elem_setup, "{value} = {var};")?;
       }
       else if !matches!(prop.kind, "string_fragment" | "number" | "property_identifier" | "false" | "true") {
         if is_reactive_kind(prop.kind) {
-          writeln!(f, "{VAR_PREF}watchAttribute({var}, \"{}\", () => {value});", prop.key)?;
+          writeln!(elem_setup, "{VAR_PREF}watchAttribute({var}, \"{}\", () => {value});", prop.key)?;
         }
         else {
-          writeln!(f, "{VAR_PREF}watchAttribute({var}, \"{}\", {value});", prop.key)?;
+          writeln!(elem_setup, "{VAR_PREF}watchAttribute({var}, \"{}\", {value});", prop.key)?;
         }
       }
     }
 
     let mut first = true;
-    let og_var = var.clone();
     for child in &self.children {
       *var_idx += 1;
       let prev_var = var;
@@ -319,10 +326,10 @@ impl<'a> JsxTemplate<'a> {
 
       if first {
         first = false;
-        writeln!(f, "let {var} = {prev_var}.firstChild; // {}", { child.kind })?;
+        writeln!(elem_vars, "const {var} = {prev_var}.firstChild; // {}", child.kind)?;
       }
       else {
-        writeln!(f, "let {var} = {prev_var}.nextSibling; // {}", { child.kind })?;
+        writeln!(elem_vars, "const {var} = {prev_var}.nextSibling; // {}", child.kind)?;
       }
 
       match child.kind {
@@ -333,29 +340,49 @@ impl<'a> JsxTemplate<'a> {
           };
 
           if elem.is_component() {
-            writeln!(f, "{var} = {VAR_PREF}insertChild({}, {var});", elem.generate_component_call(templates)?)?;
+            writeln!(elem_setup, "{VAR_PREF}insertChild({}, {var});", elem.generate_component_call(templates)?)?;
           }
           else {
-            writeln!(f, "{}", elem.generate_fn(-1, var_idx, templates)?)?;
+            let (vars, setup) = elem.generate_fn(var_idx, templates)?;
+            write!(elem_vars, "{}", vars)?;
+            write!(elem_setup, "{}", setup)?;
           }
         }
         "jsx_expression" => {
+          let value = replace_jsx(child.node, templates, child.value)?;
           if is_reactive_kind(child.node.named_child(0).unwrap().kind()) {
-            writeln!(f, "{var} = {VAR_PREF}insertChild(() => {}, {var});", child.value)?;
+            writeln!(elem_setup, "{VAR_PREF}insertChild(() => {}, {var});", value)?;
           }
           else {
-            writeln!(f, "{var} = {VAR_PREF}insertChild({}, {var});", child.value)?;
+            writeln!(elem_setup, "{VAR_PREF}insertChild({}, {var});", value)?;
           }
         }
         _ => (),
       }
     }
 
-    if id >= 0 {
-      writeln!(f, "return {og_var};\n}})();")?;
-    }
+    Ok((elem_vars, elem_setup))
+  }
 
-    Ok(f)
+  fn parts(&self, templates: &[JsxTemplate]) -> Result<TemplateParts, ParserError> {
+    let mut var_idx = 0;
+    let mut ret = TemplateParts {
+      imports: String::new(),
+      create_fn: String::new(),
+    };
+
+    write!(
+      ret.imports,
+      "const {VAR_PREF}templ{} = {VAR_PREF}template(`{}`)",
+      self.id,
+      self.generate_template_string(templates)?
+    )?;
+
+    let (elem_vars, elem_hooks) = self.generate_fn(&mut var_idx, templates)?;
+
+    write!(ret.create_fn, "(() => {{\n{elem_vars}\n{elem_hooks}\nreturn {VAR_PREF}el0;\n}})()",)?;
+
+    Ok(ret)
   }
 }
 
@@ -363,6 +390,12 @@ impl<'a> PartialEq<Child<'a>> for JsxTemplate<'a> {
   fn eq(&self, other: &Child) -> bool {
     other.start == self.start && other.end == self.end
   }
+}
+
+#[derive(Debug)]
+struct TemplateParts {
+  imports: String,
+  create_fn: String,
 }
 
 fn is_reactive_kind(kind: &str) -> bool {
@@ -381,4 +414,27 @@ fn is_reactive_kind(kind: &str) -> bool {
       | "array"
       | "call_expression"
   )
+}
+
+fn replace_jsx<'a>(node: Node<'_>, templates: &[JsxTemplate], value: &'a str) -> Result<Cow<'a, str>, ParserError> {
+  let range = node.start_byte()..node.end_byte() + 1;
+  let mut ranges: Vec<std::ops::Range<usize>> = Vec::new();
+  let elems = templates
+    .iter()
+    .rev()
+    .filter(|t| range.contains(&t.start) && range.contains(&t.end))
+    .filter(|t| {
+      let ret = !ranges.iter().any(|r| r.contains(&t.start) && r.contains(&t.end));
+      ranges.push(t.start..t.end + 1);
+      ret
+    });
+
+  let mut v = None;
+  for (i, elem) in elems.enumerate() {
+    let v = v.get_or_insert_with(|| value.to_string());
+    let parts = elem.parts(templates)?;
+    v.replace_range(elem.start - range.start..elem.end - range.start, &parts.create_fn);
+  }
+
+  Ok(if let Some(v) = v { Cow::Owned(v) } else { Cow::Borrowed(value) })
 }
