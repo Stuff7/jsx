@@ -32,9 +32,16 @@ fn main() -> Result<(), ParserError> {
       .map(|(i, m)| JsxTemplate::parse(i, m.captures, &source))
       .collect::<Result<Box<_>, ParserError>>()?;
 
-    for template in &templates {
+    for (i, template) in templates.iter().enumerate().rev() {
       if template.is_root {
-        println!("====================================================");
+        if templates.iter().rev().take(templates.len() - 1 - i).any(|t| {
+          let range = t.start..t.end + 1;
+          range.contains(&template.start) && range.contains(&template.end)
+        }) {
+          continue;
+        }
+
+        println!("==================={} - {}====================", template.start, template.end);
         let parts = template.parts(&templates, &mut state)?;
         println!("{}\n\n{};\n\n", parts.imports, parts.create_fn);
       }

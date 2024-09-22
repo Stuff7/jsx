@@ -69,8 +69,8 @@ impl<'a> PartialEq<Child<'a>> for JsxTemplate<'a> {
 #[derive(Debug)]
 pub struct JsxTemplate<'a> {
   id: usize,
-  start: usize,
-  end: usize,
+  pub start: usize,
+  pub end: usize,
   tag: &'a str,
   is_self_closing: bool,
   pub is_root: bool,
