@@ -4,6 +4,7 @@ mod error;
 use error::ParserError;
 use std::{
   borrow::Cow,
+  collections::HashSet,
   fmt::{Debug, Write},
   fs::{self},
   io::Read,
@@ -23,6 +24,7 @@ fn main() -> Result<(), ParserError> {
 pub fn parse<I: Iterator<Item = PathBuf>>(paths: I) -> Result<(), ParserError> {
   let mut parser = JsxParser::new()?;
   let mut source = Vec::new();
+  let mut global_events = HashSet::new();
   let paths: Box<[_]> = paths.collect();
 
   for path in paths.iter() {
@@ -40,10 +42,12 @@ pub fn parse<I: Iterator<Item = PathBuf>>(paths: I) -> Result<(), ParserError> {
     for template in &templates {
       if template.is_root {
         println!("====================================================");
-        let parts = template.parts(&templates)?;
-        println!("{};\n\n{};\n\n", parts.imports, parts.create_fn);
+        let parts = template.parts(&templates, &mut global_events)?;
+        println!("{}\n\n{};\n\n", parts.imports, parts.create_fn);
       }
     }
+
+    source.clear();
   }
 
   Ok(())
@@ -187,17 +191,42 @@ impl<'a> JsxTemplate<'a> {
     let mut f = String::new();
     write!(f, "<{}", self.tag)?;
 
+    let mut classes: Option<Vec<&str>> = None;
+    let mut styles: Option<Vec<Box<str>>> = None;
+
     for prop in &self.props {
-      if !matches!(prop.kind, "string_fragment" | "number" | "property_identifier" | "false" | "true")
-        || prop.key.starts_with('$')
-        || prop.key.contains(':')
-      {
+      if !is_static_kind(prop.kind) || prop.key.starts_with('$') {
         continue;
       }
-      write!(f, " {}", prop.key)?;
-      if let Some(v) = prop.value {
-        write!(f, "=\"{v}\"")?;
+
+      if prop.key.starts_with("class:") {
+        let class = prop.key.trim_start_matches("class:");
+        let classes = classes.get_or_insert_with(|| Vec::with_capacity(10));
+        classes.push(class);
       }
+      else if prop.key.starts_with("style:") {
+        let property = prop.key.trim_start_matches("style:");
+        let styles = styles.get_or_insert_with(|| Vec::with_capacity(16));
+        styles.push(format!("{property}:{};", prop.value.unwrap()).into());
+      }
+      else if prop.key.starts_with("var:") {
+        let custom_property = prop.key.trim_start_matches("var:");
+        let styles = styles.get_or_insert_with(|| Vec::with_capacity(16));
+        styles.push(format!("--{custom_property}:{};", prop.value.unwrap()).into());
+      }
+      else {
+        write!(f, " {}", prop.key)?;
+        if let Some(v) = prop.value {
+          write!(f, "=\"{v}\"")?;
+        }
+      }
+    }
+
+    if let Some(classes) = classes.take() {
+      write!(f, " class=\"{}\"", classes.join(" "))?;
+    }
+    if let Some(styles) = styles.take() {
+      write!(f, " style=\"{}\"", styles.join(""))?;
     }
 
     if self.is_self_closing {
@@ -239,7 +268,7 @@ impl<'a> JsxTemplate<'a> {
     Ok(f)
   }
 
-  fn generate_component_call(&self, templates: &[JsxTemplate]) -> Result<String, ParserError> {
+  fn generate_component_call(&self, templates: &[JsxTemplate], global_events: &mut HashSet<Box<str>>) -> Result<String, ParserError> {
     let mut f = format!("{}(", self.tag);
 
     if self.props.is_empty() {
@@ -256,11 +285,11 @@ impl<'a> JsxTemplate<'a> {
             f,
             "get {}() {{ return {} }}, ",
             prop.key,
-            replace_jsx(prop.node, templates, prop.value.unwrap())?
+            replace_jsx(prop.node, templates, prop.value.unwrap(), global_events)?
           )?;
         }
         else if let Some(value) = prop.value {
-          write!(f, "{}: {}, ", prop.key, replace_jsx(prop.node, templates, value)?)?;
+          write!(f, "{}: {}, ", prop.key, replace_jsx(prop.node, templates, value, global_events)?)?;
         }
         else {
           write!(f, "{}: true, ", prop.key)?;
@@ -269,24 +298,61 @@ impl<'a> JsxTemplate<'a> {
       write!(f, "}}")?;
     }
 
-    for child in &self.children {
-      if is_reactive_kind(child.kind) {
-        write!(f, ", () => {}", replace_jsx(child.node, templates, child.value)?)?;
+    if !self.children.is_empty() {
+      write!(f, ", {{")?;
+      let mut default_slot: Option<Vec<Cow<str>>> = None;
+      for child in &self.children {
+        if matches!(child.kind, "jsx_element" | "jsx_self_closing_element") {
+          let Some(elem) = templates.iter().find(|t| *t == child)
+          else {
+            continue;
+          };
+          let Some(slot) = elem.props.iter().find(|p| p.key == "slot")
+          else {
+            let slot = default_slot.get_or_insert_with(|| Vec::with_capacity(10));
+            slot.push(replace_jsx(child.node, templates, child.value, global_events)?);
+            continue;
+          };
+          write!(
+            f,
+            "{}: {}, ",
+            slot.value.unwrap(),
+            replace_jsx(child.node, templates, child.value, global_events)?
+          )?;
+        }
+        else if is_reactive_kind(child.kind) {
+          let slot = default_slot.get_or_insert_with(|| Vec::with_capacity(10));
+          slot.push(Cow::Owned(format!(
+            "() => {}",
+            replace_jsx(child.node, templates, child.value, global_events)?
+          )));
+        }
+        else {
+          let slot = default_slot.get_or_insert_with(|| Vec::with_capacity(10));
+          slot.push(replace_jsx(child.node, templates, child.value, global_events)?);
+        }
       }
-      else {
-        write!(f, ", {}", replace_jsx(child.node, templates, child.value)?)?;
+      if let Some(slot) = default_slot {
+        write!(f, "default: [{}]", slot.join(","))?;
       }
+      write!(f, "}}")?;
     }
     write!(f, ")")?;
 
     Ok(f)
   }
 
-  fn generate_fn(&self, var_idx: &mut usize, templates: &[JsxTemplate]) -> Result<(String, String), ParserError> {
+  fn generate_fn(
+    &self,
+    var_idx: &mut usize,
+    templates: &[JsxTemplate],
+    global_events: &mut HashSet<Box<str>>,
+  ) -> Result<(String, String, String), ParserError> {
     if self.is_component() {
-      return Ok((self.generate_component_call(templates)?, String::new()));
+      return Ok((self.generate_component_call(templates, global_events)?, String::new(), String::new()));
     }
 
+    let mut globals = String::new();
     let mut elem_vars = String::new();
     let mut elem_setup = String::new();
     let mut var = format!("{VAR_PREF}el{}", *var_idx);
@@ -296,25 +362,63 @@ impl<'a> JsxTemplate<'a> {
     }
 
     for prop in &self.props {
+      if is_static_kind(prop.kind) {
+        continue;
+      }
+
       let Some(value) = prop.value
       else {
         continue;
       };
-      let value = replace_jsx(prop.node, templates, value)?;
+      let value = replace_jsx(prop.node, templates, value, global_events)?;
 
       if let Some(event_name) = prop.key.strip_prefix("on:") {
         writeln!(elem_setup, "{var}.addEventListener(\"{event_name}\", {value});")?;
       }
+      if let Some(event_name) = prop.key.strip_prefix("g:on") {
+        let events_var = format!("{VAR_PREF}global_event_{event_name}");
+        if global_events.insert(event_name.into()) {
+          writeln!(globals, "window.{events_var} = {VAR_PREF}createGlobalEvent(\"{event_name}\");")?;
+        }
+        writeln!(
+          elem_setup,
+          "{VAR_PREF}addGlobalEvent(window.{events_var}, {var}, \"{event_name}\", {value});"
+        )?;
+      }
+      else if prop.key.starts_with("class:") {
+        let class = prop.key.trim_start_matches("class:");
+        writeln!(
+          elem_setup,
+          "{VAR_PREF}trackClass({var}, \"{class}\", {});",
+          wrap_reactive_value(prop.kind, &value)
+        )?;
+      }
+      else if prop.key.starts_with("style:") {
+        let property = prop.key.trim_start_matches("style:");
+        writeln!(
+          elem_setup,
+          "{VAR_PREF}trackCssProperty({var}, \"{property}\", {});",
+          wrap_reactive_value(prop.kind, &value)
+        )?;
+      }
+      else if prop.key.starts_with("var:") {
+        let custom_property = prop.key.trim_start_matches("var:");
+        writeln!(
+          elem_setup,
+          "{VAR_PREF}trackCssProperty({var}, \"--{custom_property}\", {});",
+          wrap_reactive_value(prop.kind, &value)
+        )?;
+      }
       else if prop.key == "$ref" {
         writeln!(elem_setup, "{value} = {var};")?;
       }
-      else if !matches!(prop.kind, "string_fragment" | "number" | "property_identifier" | "false" | "true") {
-        if is_reactive_kind(prop.kind) {
-          writeln!(elem_setup, "{VAR_PREF}watchAttribute({var}, \"{}\", () => {value});", prop.key)?;
-        }
-        else {
-          writeln!(elem_setup, "{VAR_PREF}watchAttribute({var}, \"{}\", {value});", prop.key)?;
-        }
+      else {
+        writeln!(
+          elem_setup,
+          "{VAR_PREF}trackAttribute({var}, \"{}\", {});",
+          prop.key,
+          wrap_reactive_value(prop.kind, &value)
+        )?;
       }
     }
 
@@ -340,16 +444,29 @@ impl<'a> JsxTemplate<'a> {
           };
 
           if elem.is_component() {
-            writeln!(elem_setup, "{VAR_PREF}insertChild({}, {var});", elem.generate_component_call(templates)?)?;
+            writeln!(
+              elem_setup,
+              "{VAR_PREF}insertChild({}, {var});",
+              elem.generate_component_call(templates, global_events)?
+            )?;
+          }
+          else if elem.tag == "slot" {
+            let name = elem
+              .props
+              .iter()
+              .find_map(|p| (p.key == "name").then(|| p.value.unwrap()))
+              .unwrap_or("default");
+            writeln!(elem_setup, "{VAR_PREF}insertChild($$slots[\"{name}\"], {var})")?;
           }
           else {
-            let (vars, setup) = elem.generate_fn(var_idx, templates)?;
+            let (vars, setup, g) = elem.generate_fn(var_idx, templates, global_events)?;
             write!(elem_vars, "{}", vars)?;
             write!(elem_setup, "{}", setup)?;
+            write!(globals, "{}", g)?;
           }
         }
         "jsx_expression" => {
-          let value = replace_jsx(child.node, templates, child.value)?;
+          let value = replace_jsx(child.node, templates, child.value, global_events)?;
           if is_reactive_kind(child.node.named_child(0).unwrap().kind()) {
             writeln!(elem_setup, "{VAR_PREF}insertChild(() => {}, {var});", value)?;
           }
@@ -361,24 +478,23 @@ impl<'a> JsxTemplate<'a> {
       }
     }
 
-    Ok((elem_vars, elem_setup))
+    Ok((elem_vars, elem_setup, globals))
   }
 
-  fn parts(&self, templates: &[JsxTemplate]) -> Result<TemplateParts, ParserError> {
+  fn parts(&self, templates: &[JsxTemplate], global_events: &mut HashSet<Box<str>>) -> Result<TemplateParts, ParserError> {
     let mut var_idx = 0;
     let mut ret = TemplateParts {
       imports: String::new(),
       create_fn: String::new(),
     };
+    let templ = self.generate_template_string(templates)?;
+    let (elem_vars, elem_hooks, globals) = self.generate_fn(&mut var_idx, templates, global_events)?;
 
     write!(
       ret.imports,
-      "const {VAR_PREF}templ{} = {VAR_PREF}template(`{}`)",
-      self.id,
-      self.generate_template_string(templates)?
+      "const {VAR_PREF}templ{} = {VAR_PREF}template(`{templ}`);\n{globals}",
+      self.id
     )?;
-
-    let (elem_vars, elem_hooks) = self.generate_fn(&mut var_idx, templates)?;
 
     write!(ret.create_fn, "(() => {{\n{elem_vars}\n{elem_hooks}\nreturn {VAR_PREF}el0;\n}})()",)?;
 
@@ -416,7 +532,28 @@ fn is_reactive_kind(kind: &str) -> bool {
   )
 }
 
-fn replace_jsx<'a>(node: Node<'_>, templates: &[JsxTemplate], value: &'a str) -> Result<Cow<'a, str>, ParserError> {
+fn is_static_kind(kind: &str) -> bool {
+  matches!(
+    kind,
+    "string_fragment" | "number" | "property_identifier" | "jsx_namespace_name" | "false" | "true"
+  )
+}
+
+fn wrap_reactive_value<'a>(kind: &str, value: &'a str) -> Cow<'a, str> {
+  if is_reactive_kind(kind) {
+    Cow::Owned(format!("() => {value}"))
+  }
+  else {
+    Cow::Borrowed(value)
+  }
+}
+
+fn replace_jsx<'a>(
+  node: Node<'_>,
+  templates: &[JsxTemplate],
+  value: &'a str,
+  global_events: &mut HashSet<Box<str>>,
+) -> Result<Cow<'a, str>, ParserError> {
   let range = node.start_byte()..node.end_byte() + 1;
   let mut ranges: Vec<std::ops::Range<usize>> = Vec::new();
   let elems = templates
@@ -432,7 +569,7 @@ fn replace_jsx<'a>(node: Node<'_>, templates: &[JsxTemplate], value: &'a str) ->
   let mut v = None;
   for elem in elems {
     let v = v.get_or_insert_with(|| value.to_string());
-    let parts = elem.parts(templates)?;
+    let parts = elem.parts(templates, global_events)?;
     v.replace_range(elem.start - range.start..elem.end - range.start, &parts.create_fn);
   }
 
