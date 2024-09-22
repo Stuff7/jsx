@@ -9,9 +9,9 @@ use std::{
 
 #[derive(thiserror::Error)]
 pub enum ParserError {
-  #[error("Failed to parse")]
+  #[error("Failed to parse source file")]
   Parse,
-  #[error("[{ln}:{col}] Fatal: {msg}")]
+  #[error("Encountered error at [{ln}:{col}] {msg}")]
   ParseMsg { ln: usize, col: usize, msg: &'static str },
   #[error("Missing directory path")]
   MissingDir,
@@ -40,8 +40,12 @@ impl ParserError {
     let range = node.range().start_point;
     Self::ParseMsg {
       msg,
-      ln: range.row,
-      col: range.column,
+      ln: range.row + 1,
+      col: range.column + 1,
     }
+  }
+
+  pub fn empty_jsx_expression(node: tree_sitter::Node<'_>) -> Self {
+    Self::msg("Empty JSX expressions are invalid syntax", node)
   }
 }
