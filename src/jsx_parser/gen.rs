@@ -328,7 +328,7 @@ impl<'a> JsxTemplate<'a> {
           if elem.is_component() {
             let (slots, call) = elem.generate_component_call(templates, state)?;
             state.imports.insert("insertChild");
-            writeln!(elem_setup, "{slots};\n{VAR_PREF}insertChild({call}, {var});",)?;
+            writeln!(elem_setup, "{slots};\n{VAR_PREF}insertChild({var}, {call});",)?;
           }
           else if elem.tag == "slot" {
             let name = elem
@@ -343,7 +343,7 @@ impl<'a> JsxTemplate<'a> {
               .transpose()?
               .unwrap_or("default");
             state.imports.insert("insertChild");
-            writeln!(elem_setup, "{VAR_PREF}insertChild(window.$$slots[\"{name}\"], {var})")?;
+            writeln!(elem_setup, "{VAR_PREF}insertChild({var}, window.$$slots[\"{name}\"]);")?;
           }
           else {
             let (vars, setup) = elem.generate_fn(var_idx, templates, state)?;
@@ -361,11 +361,11 @@ impl<'a> JsxTemplate<'a> {
               .kind(),
           ) {
             state.imports.insert("insertChild");
-            writeln!(elem_setup, "{VAR_PREF}insertChild(() => {}, {var});", value)?;
+            writeln!(elem_setup, "{VAR_PREF}insertChild({var}, () => {});", value)?;
           }
           else {
             state.imports.insert("insertChild");
-            writeln!(elem_setup, "{VAR_PREF}insertChild({}, {var});", value)?;
+            writeln!(elem_setup, "{VAR_PREF}insertChild({var}, {});", value)?;
           }
         }
         _ => (),

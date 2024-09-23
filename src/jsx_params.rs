@@ -7,13 +7,16 @@ use std::{
   fs::{self},
   io::{self, Read, Seek, Write},
   path::{Path, PathBuf},
+  time::Instant,
 };
 use tree_sitter::{Parser, Query, QueryCapture, QueryCursor};
 
 fn main() -> Result<(), ParserError> {
   let path = std::env::args().nth(1).ok_or(ParserError::MissingDir)?;
   let paths = dir::RecursiveDirIterator::new(path)?.filter(|p| p.extension().is_some_and(|n| n == "js"));
+  let t = Instant::now();
   parse(paths)?;
+  println!("Done in {:?}", t.elapsed());
 
   Ok(())
 }

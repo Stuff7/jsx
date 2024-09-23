@@ -4,7 +4,7 @@ mod jsx_parser;
 
 use error::ParserError;
 use jsx_parser::{GlobalState, JsxParser, JsxTemplate};
-use std::{fs, io::Read};
+use std::{fs, io::Read, time::Instant};
 
 fn main() -> Result<(), ParserError> {
   let path = std::env::args().nth(1).ok_or(ParserError::MissingDir)?;
@@ -16,6 +16,7 @@ fn main() -> Result<(), ParserError> {
     matches!(ext, "js" | "jsx" | "ts" | "tsx")
   });
 
+  let t = Instant::now();
   let mut parser = JsxParser::new()?;
   let mut source = Vec::new();
   let mut state = GlobalState::default();
@@ -51,6 +52,7 @@ fn main() -> Result<(), ParserError> {
 
     source.clear();
   }
+  println!("Done in {:?}", t.elapsed());
 
   Ok(())
 }
