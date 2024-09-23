@@ -111,11 +111,18 @@ impl<'a> JsxTemplate<'a> {
     if !self.children.is_empty() {
       write!(s, "window.$$slots = {{")?;
       let mut default_slot: Option<Vec<Cow<str>>> = None;
-      for child in &self.children {
+      let mut idx = 0;
+
+      while let Some(child) = self.children.get(idx) {
         let value = if is_jsx_text(child.kind) {
-          Cow::Owned(escape_jsx_text(child.value))
+          let escaped = escape_jsx_text(&self.children, &mut idx)?;
+          if escaped == "\"\"" {
+            continue;
+          }
+          Cow::Owned(escaped)
         }
         else {
+          idx += 1;
           state.is_component_child = true;
           let ret = replace_jsx(child.node, templates, child.value, state)?;
           state.is_component_child = false;
@@ -154,7 +161,7 @@ impl<'a> JsxTemplate<'a> {
       if let Some(slot) = default_slot {
         write!(s, "default: [{}]", slot.join(","))?;
       }
-      write!(s, "}}")?;
+      write!(s, "}};")?;
     }
 
     let mut f = format!("{}(", self.tag);
@@ -205,13 +212,22 @@ impl<'a> JsxTemplate<'a> {
   }
 
   pub(super) fn generate_fn(&self, var_idx: &mut usize, templates: &[JsxTemplate], state: &mut GlobalState) -> Result<(String, String), ParserError> {
+    let mut elem_vars = String::new();
+    let mut var = format!("{VAR_PREF}el{}", *var_idx);
+
     if self.is_component() {
-      return self.generate_component_call(templates, state);
+      let is_component_child = state.is_component_child;
+      let (s, f) = self.generate_component_call(templates, state)?;
+
+      if self.is_root || is_component_child {
+        writeln!(elem_vars, "const {var} = {f};")?;
+        return Ok((s, elem_vars));
+      }
+
+      return Ok((s, f));
     }
 
-    let mut elem_vars = String::new();
     let mut elem_setup = String::new();
-    let mut var = format!("{VAR_PREF}el{}", *var_idx);
 
     if self.is_root || state.is_component_child {
       state.imports.insert("template");
@@ -230,47 +246,49 @@ impl<'a> JsxTemplate<'a> {
       };
       let value = replace_jsx(prop.node, templates, value, state)?;
 
-      if let Some(event_name) = prop.key.strip_prefix("on:") {
-        writeln!(elem_setup, "{var}.addEventListener(\"{event_name}\", {value});")?;
-      }
-      if let Some(event_name) = prop.key.strip_prefix("g:on") {
-        if state.events.insert(event_name.into()) {
-          state.imports.insert("createGlobalEvent");
-          state.imports.insert("addGlobalEvent");
+      if prop.key.contains(':') {
+        if let Some(event_name) = prop.key.strip_prefix("on:") {
+          writeln!(elem_setup, "{var}.addEventListener(\"{event_name}\", {value});")?;
         }
+        else if let Some(event_name) = prop.key.strip_prefix("g:on") {
+          if state.events.insert(event_name.into()) {
+            state.imports.insert("createGlobalEvent");
+            state.imports.insert("addGlobalEvent");
+          }
 
-        writeln!(
-          elem_setup,
-          "{VAR_PREF}addGlobalEvent(window.{}, {var}, \"{event_name}\", {value});",
-          generate_event_var(event_name),
-        )?;
-      }
-      else if prop.key.starts_with("class:") {
-        let class = prop.key.trim_start_matches("class:");
-        state.imports.insert("trackClass");
-        writeln!(
-          elem_setup,
-          "{VAR_PREF}trackClass({var}, \"{class}\", {});",
-          wrap_reactive_value(prop.kind, &value)
-        )?;
-      }
-      else if prop.key.starts_with("style:") {
-        let property = prop.key.trim_start_matches("style:");
-        state.imports.insert("trackCssProperty");
-        writeln!(
-          elem_setup,
-          "{VAR_PREF}trackCssProperty({var}, \"{property}\", {});",
-          wrap_reactive_value(prop.kind, &value)
-        )?;
-      }
-      else if prop.key.starts_with("var:") {
-        let custom_property = prop.key.trim_start_matches("var:");
-        state.imports.insert("trackCssProperty");
-        writeln!(
-          elem_setup,
-          "{VAR_PREF}trackCssProperty({var}, \"--{custom_property}\", {});",
-          wrap_reactive_value(prop.kind, &value)
-        )?;
+          writeln!(
+            elem_setup,
+            "{VAR_PREF}addGlobalEvent(window.{}, {var}, \"{event_name}\", {value});",
+            generate_event_var(event_name),
+          )?;
+        }
+        else if prop.key.starts_with("class:") {
+          let class = prop.key.trim_start_matches("class:");
+          state.imports.insert("trackClass");
+          writeln!(
+            elem_setup,
+            "{VAR_PREF}trackClass({var}, \"{class}\", {});",
+            wrap_reactive_value(prop.kind, &value)
+          )?;
+        }
+        else if prop.key.starts_with("style:") {
+          let property = prop.key.trim_start_matches("style:");
+          state.imports.insert("trackCssProperty");
+          writeln!(
+            elem_setup,
+            "{VAR_PREF}trackCssProperty({var}, \"{property}\", {});",
+            wrap_reactive_value(prop.kind, &value)
+          )?;
+        }
+        else if prop.key.starts_with("var:") {
+          let custom_property = prop.key.trim_start_matches("var:");
+          state.imports.insert("trackCssProperty");
+          writeln!(
+            elem_setup,
+            "{VAR_PREF}trackCssProperty({var}, \"--{custom_property}\", {});",
+            wrap_reactive_value(prop.kind, &value)
+          )?;
+        }
       }
       else if prop.key == "$ref" {
         writeln!(elem_setup, "{value} = {var};")?;
@@ -310,7 +328,7 @@ impl<'a> JsxTemplate<'a> {
           if elem.is_component() {
             let (slots, call) = elem.generate_component_call(templates, state)?;
             state.imports.insert("insertChild");
-            writeln!(elem_setup, "{slots}\n;{VAR_PREF}insertChild({call}, {var});",)?;
+            writeln!(elem_setup, "{slots};\n{VAR_PREF}insertChild({call}, {var});",)?;
           }
           else if elem.tag == "slot" {
             let name = elem
