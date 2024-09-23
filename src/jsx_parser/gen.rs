@@ -1,5 +1,7 @@
 use super::{
-  utils::{is_reactive_kind, is_static_kind, replace_jsx, wrap_reactive_value, GlobalState},
+  utils::{
+    escape_jsx_text, generate_event_var, is_jsx_element, is_jsx_text, is_reactive_kind, is_static_kind, replace_jsx, wrap_reactive_value, GlobalState,
+  },
   JsxTemplate, VAR_PREF,
 };
 use crate::error::ParserError;
@@ -72,30 +74,30 @@ impl<'a> JsxTemplate<'a> {
     let mut first_txt = false;
     write!(f, ">")?;
     for child in &self.children {
-      match child.kind {
-        "jsx_self_closing_element" | "jsx_element" => {
-          let Some(elem) = templates.iter().find(|t| *t == child)
-          else {
-            continue;
-          };
+      if is_jsx_element(child.kind) {
+        let Some(elem) = templates.iter().find(|t| *t == child)
+        else {
+          continue;
+        };
 
-          if elem.is_component() {
-            write!(f, "<!>")?;
-          }
-          else {
-            write!(f, "{}", elem.generate_template_string(templates)?)?;
-          }
+        if elem.is_component() {
+          write!(f, "<!>")?;
         }
-        "jsx_text" => {
-          if first_txt {
-            write!(f, "{}", child.value)?
-          }
-          else {
-            first_txt = true;
-            write!(f, "{}", child.value.trim_start())?
-          }
+        else {
+          write!(f, "{}", elem.generate_template_string(templates)?)?;
         }
-        _ => write!(f, "<!>")?,
+      }
+      else if is_jsx_text(child.kind) {
+        if first_txt {
+          write!(f, "{}", child.value)?
+        }
+        else {
+          first_txt = true;
+          write!(f, "{}", child.value.trim_start())?
+        }
+      }
+      else {
+        write!(f, "<!>")?;
       }
     }
     write!(f, "</{}>", self.tag)?;
@@ -110,7 +112,17 @@ impl<'a> JsxTemplate<'a> {
       write!(s, "window.$$slots = {{")?;
       let mut default_slot: Option<Vec<Cow<str>>> = None;
       for child in &self.children {
-        if matches!(child.kind, "jsx_element" | "jsx_self_closing_element") {
+        let value = if is_jsx_text(child.kind) {
+          Cow::Owned(escape_jsx_text(child.value))
+        }
+        else {
+          state.is_component_child = true;
+          let ret = replace_jsx(child.node, templates, child.value, state)?;
+          state.is_component_child = false;
+          ret
+        };
+
+        if is_jsx_element(child.kind) {
           let Some(elem) = templates.iter().find(|t| *t == child)
           else {
             continue;
@@ -118,7 +130,7 @@ impl<'a> JsxTemplate<'a> {
           let Some(slot) = elem.props.iter().find(|p| p.key == "slot")
           else {
             let slot = default_slot.get_or_insert_with(|| Vec::with_capacity(10));
-            slot.push(replace_jsx(child.node, templates, child.value, state)?);
+            slot.push(value);
             continue;
           };
           write!(
@@ -127,16 +139,16 @@ impl<'a> JsxTemplate<'a> {
             slot
               .value
               .ok_or_else(|| ParserError::msg("\"slot\" attribute must have a value", child.node))?,
-            replace_jsx(child.node, templates, child.value, state)?
+            value
           )?;
         }
         else if is_reactive_kind(child.kind) {
           let slot = default_slot.get_or_insert_with(|| Vec::with_capacity(10));
-          slot.push(Cow::Owned(format!("() => {}", replace_jsx(child.node, templates, child.value, state)?)));
+          slot.push(Cow::Owned(format!("() => {}", value)));
         }
         else {
           let slot = default_slot.get_or_insert_with(|| Vec::with_capacity(10));
-          slot.push(replace_jsx(child.node, templates, child.value, state)?);
+          slot.push(value);
         }
       }
       if let Some(slot) = default_slot {
@@ -192,23 +204,18 @@ impl<'a> JsxTemplate<'a> {
     Ok((s, f))
   }
 
-  pub(super) fn generate_fn(
-    &self,
-    var_idx: &mut usize,
-    templates: &[JsxTemplate],
-    state: &mut GlobalState,
-  ) -> Result<(String, String, String), ParserError> {
+  pub(super) fn generate_fn(&self, var_idx: &mut usize, templates: &[JsxTemplate], state: &mut GlobalState) -> Result<(String, String), ParserError> {
     if self.is_component() {
-      let (slots, call) = self.generate_component_call(templates, state)?;
-      return Ok((slots, call, String::new()));
+      return self.generate_component_call(templates, state);
     }
 
-    let mut globals = String::new();
     let mut elem_vars = String::new();
     let mut elem_setup = String::new();
     let mut var = format!("{VAR_PREF}el{}", *var_idx);
 
-    if self.is_root {
+    if self.is_root || state.is_component_child {
+      state.imports.insert("template");
+      state.templates.insert(self.id);
       writeln!(elem_vars, "const {var} = {VAR_PREF}templ{}();", self.id)?;
     }
 
@@ -227,15 +234,15 @@ impl<'a> JsxTemplate<'a> {
         writeln!(elem_setup, "{var}.addEventListener(\"{event_name}\", {value});")?;
       }
       if let Some(event_name) = prop.key.strip_prefix("g:on") {
-        let events_var = format!("{VAR_PREF}global_event_{event_name}");
         if state.events.insert(event_name.into()) {
           state.imports.insert("createGlobalEvent");
-          writeln!(globals, "window.{events_var} = {VAR_PREF}createGlobalEvent(\"{event_name}\");")?;
+          state.imports.insert("addGlobalEvent");
         }
-        state.imports.insert("addGlobalEvent");
+
         writeln!(
           elem_setup,
-          "{VAR_PREF}addGlobalEvent(window.{events_var}, {var}, \"{event_name}\", {value});"
+          "{VAR_PREF}addGlobalEvent(window.{}, {var}, \"{event_name}\", {value});",
+          generate_event_var(event_name),
         )?;
       }
       else if prop.key.starts_with("class:") {
@@ -321,10 +328,9 @@ impl<'a> JsxTemplate<'a> {
             writeln!(elem_setup, "{VAR_PREF}insertChild(window.$$slots[\"{name}\"], {var})")?;
           }
           else {
-            let (vars, setup, g) = elem.generate_fn(var_idx, templates, state)?;
+            let (vars, setup) = elem.generate_fn(var_idx, templates, state)?;
             write!(elem_vars, "{}", vars)?;
             write!(elem_setup, "{}", setup)?;
-            write!(globals, "{}", g)?;
           }
         }
         "jsx_expression" => {
@@ -348,6 +354,6 @@ impl<'a> JsxTemplate<'a> {
       }
     }
 
-    Ok((elem_vars, elem_setup, globals))
+    Ok((elem_vars, elem_setup))
   }
 }

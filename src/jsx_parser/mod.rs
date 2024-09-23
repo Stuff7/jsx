@@ -83,6 +83,10 @@ impl<'a> JsxTemplate<'a> {
     self.tag.chars().next().is_some_and(|c| c.is_ascii_uppercase())
   }
 
+  pub fn source<'b>(&self, source: &'b [u8]) -> Result<&'b str, ParserError> {
+    Ok(std::str::from_utf8(&source[self.start..self.end])?)
+  }
+
   pub fn parse(id: usize, captures: &'a [QueryCapture<'a>], source: &'a [u8]) -> Result<Self, ParserError> {
     enum CaptureIdx {
       Tag,
@@ -162,16 +166,8 @@ impl<'a> JsxTemplate<'a> {
       imports: String::new(),
       create_fn: String::new(),
     };
-    let templ = self.generate_template_string(templates)?;
-    let (elem_vars, elem_hooks, globals) = self.generate_fn(&mut var_idx, templates, state)?;
 
-    state.imports.insert("template");
-    write!(
-      ret.imports,
-      "const {VAR_PREF}templ{} = {VAR_PREF}template(`{templ}`);\n{globals}",
-      self.id
-    )?;
-
+    let (elem_vars, elem_hooks) = self.generate_fn(&mut var_idx, templates, state)?;
     write!(ret.create_fn, "(() => {{\n{elem_vars}\n{elem_hooks}\nreturn {VAR_PREF}el0;\n}})()",)?;
 
     Ok(ret)

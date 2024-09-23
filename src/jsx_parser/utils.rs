@@ -41,18 +41,49 @@ pub(super) fn wrap_reactive_value<'a>(kind: &str, value: &'a str) -> Cow<'a, str
 pub struct GlobalState {
   pub(super) events: HashSet<Box<str>>,
   pub(super) imports: HashSet<&'static str>,
+  pub(super) templates: HashSet<usize>,
+  pub(super) is_component_child: bool,
 }
 
 impl GlobalState {
-  pub fn get_imports(&mut self) -> Result<String, ParserError> {
-    let mut imports = String::with_capacity(self.imports.len() * 128);
+  pub fn generate_setup_js(&mut self, templates: &[JsxTemplate]) -> Result<String, ParserError> {
+    let mut setup = String::with_capacity(self.imports.len() * 128);
     for import in &self.imports {
-      writeln!(imports, "import {{ {import} as {VAR_PREF}{import} }} from \"jsx/runtime\"")?;
+      writeln!(setup, "import {{ {import} as {VAR_PREF}{import} }} from \"jsx/runtime\"")?;
     }
+    writeln!(setup)?;
     self.imports.clear();
 
-    Ok(imports)
+    for templ_id in &self.templates {
+      let templ = templates[*templ_id].generate_template_string(templates)?;
+      writeln!(setup, "const {VAR_PREF}templ{} = {VAR_PREF}template(`{templ}`);", templ_id)?;
+    }
+    writeln!(setup)?;
+    self.templates.clear();
+
+    for event in &self.events {
+      let var = generate_event_var(event);
+      writeln!(setup, "window.{var} = {VAR_PREF}createGlobalEvent(\"{event}\");")?;
+    }
+
+    Ok(setup)
   }
+}
+
+pub(super) fn generate_event_var(event_name: &str) -> String {
+  format!("{VAR_PREF}global_event_{event_name}")
+}
+
+pub(super) fn escape_jsx_text(text: &str) -> String {
+  format!("`{}`", text.replace('`', r#"\`"#))
+}
+
+pub(super) fn is_jsx_text(kind: &str) -> bool {
+  matches!(kind, "jsx_text" | "html_character_reference")
+}
+
+pub(super) fn is_jsx_element(kind: &str) -> bool {
+  matches!(kind, "jsx_element" | "jsx_self_closing_element")
 }
 
 pub(super) fn replace_jsx<'a>(

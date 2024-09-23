@@ -42,11 +42,12 @@ fn main() -> Result<(), ParserError> {
         }
 
         println!("==================={} - {}====================", template.start, template.end);
+        println!("{}\n\n", template.source(&source)?);
         let parts = template.parts(&templates, &mut state)?;
         println!("{}\n\n{};\n\n", parts.imports, parts.create_fn);
       }
     }
-    println!("{}", state.get_imports()?);
+    println!("{}", state.generate_setup_js(&templates)?);
 
     source.clear();
   }
