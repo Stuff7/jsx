@@ -75,34 +75,135 @@ pub(super) fn generate_event_var(event_name: &str) -> String {
 }
 
 pub(super) fn escape_jsx_text(children: &[Child], idx: &mut usize) -> Result<String, ParserError> {
-  let mut text = format!("\"{}", children[*idx].value.trim_start());
-  *idx += 1;
+  let mut text = String::from("\"");
 
+  let prev_child = (*idx > 0).then(|| children.get(*idx - 1)).flatten();
   while let Some(child) = children.get(*idx) {
     match child.kind {
       "jsx_text" => {
-        write!(text, "{}", child.value.replace('"', r#"\""#))?;
+        write!(text, "{} ", child.value.replace('"', r#"\""#))?;
       }
       "html_character_reference" => {
         match child.value {
-          "&nbsp;" => write!(text, "\\xA0"),
-          "&lt;" => write!(text, "<"),
-          "&gt;" => write!(text, ">"),
-          "&#39;" => write!(text, "`"),
-          "&quot;" => write!(text, "\\\""),
-          "&amp;" => write!(text, "&"),
-          v => write!(text, "{v}"),
+          "&nbsp;" => write!(text, "\\xA0 "),
+          "&lt;" => write!(text, "< "),
+          "&gt;" => write!(text, "> "),
+          "&#39;" => write!(text, "` "),
+          "&quot;" => write!(text, "\\\" "),
+          "&amp;" => write!(text, "& "),
+          v => write!(text, "{v} "),
         }?;
       }
       _ => break,
     }
     *idx += 1;
   }
+  let next_child = children.get(*idx);
 
-  text.truncate(text.trim_end().len());
-  write!(text, "\"")?;
+  let mut append_space = false;
+  let len = {
+    let start = if prev_child.is_some_and(|c| is_jsx_element(c.kind)) && text.as_bytes().get(1).is_some_and(|b| *b == b' ') {
+      2
+    }
+    else {
+      1
+    };
+
+    if next_child.is_some_and(|c| is_jsx_element(c.kind)) {
+      let bytes = children[*idx - 1].value.as_bytes();
+      append_space = match bytes.iter().rposition(|b| !b.is_ascii_whitespace()) {
+        Some(pos) => bytes.get(pos + 1),
+        None => bytes.first(),
+      }
+      .is_some_and(|b| *b == b' ');
+    }
+
+    remove_whitespace(&mut text[start..]) + start
+  };
+
+  text.truncate(len);
+  if append_space {
+    write!(text, " \"")?;
+  }
+  else {
+    write!(text, "\"")?;
+  }
 
   Ok(text)
+}
+
+pub(super) fn remove_whitespace(s: &mut str) -> usize {
+  enum Step {
+    Start,
+    Space,
+    Alpha,
+  }
+
+  let mut step = Step::Start;
+  let mut a = 0;
+  let mut w = 0;
+  let mut n = 0;
+  let mut len = s.len();
+
+  unsafe {
+    let s = s.as_bytes_mut();
+    let mut i = 0;
+
+    while let Some(byte) = s.get(i) {
+      if byte.is_ascii_whitespace() {
+        if matches!(step, Step::Alpha) {
+          w = usize::saturating_sub(w, 1);
+          s.copy_within(a..i, n);
+          n += i - a;
+          len -= w;
+          w = 0;
+        }
+
+        w += 1;
+        step = Step::Space;
+      }
+      else {
+        match step {
+          Step::Start => {
+            n += 1;
+          }
+          Step::Space => {
+            if n == 0 {
+              a = i;
+              w += 1;
+            }
+            else {
+              a = i - 1;
+              s[a] = b' ';
+            };
+            step = Step::Alpha;
+          }
+          Step::Alpha => {
+            step = Step::Alpha;
+          }
+        }
+      }
+
+      i += 1;
+    }
+
+    if !matches!(step, Step::Start) {
+      w = usize::saturating_sub(w, 1);
+
+      if a != 0 {
+        s.copy_within(a..i, n);
+      }
+
+      if s.last().is_some_and(|b| b.is_ascii_whitespace()) {
+        len -= w + 1;
+      }
+      else {
+        len -= w;
+      }
+    }
+  }
+
+  len
 }
 
 pub(super) fn is_jsx_text(kind: &str) -> bool {
