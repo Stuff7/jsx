@@ -1,6 +1,7 @@
 use super::{Child, VAR_PREF};
 use crate::{error::ParserError, jsx_parser::JsxTemplate};
-use std::{borrow::Cow, collections::HashSet, fmt::Write};
+use core::str;
+use std::{borrow::Cow, collections::HashSet, fmt::Write, ops::Range};
 use tree_sitter::Node;
 
 pub(super) fn is_reactive_kind(kind: &str) -> bool {
@@ -88,7 +89,7 @@ pub(super) fn escape_jsx_text(children: &[Child], idx: &mut usize) -> Result<Str
           "&nbsp;" => write!(text, "\\xA0 "),
           "&lt;" => write!(text, "< "),
           "&gt;" => write!(text, "> "),
-          "&#39;" => write!(text, "` "),
+          "&#39;" => write!(text, "` "), // TODO: Handle all unicode i.e char::from_u32(39);
           "&quot;" => write!(text, "\\\" "),
           "&amp;" => write!(text, "& "),
           v => write!(text, "{v} "),
@@ -101,7 +102,7 @@ pub(super) fn escape_jsx_text(children: &[Child], idx: &mut usize) -> Result<Str
   let next_child = children.get(*idx);
 
   let mut append_space = false;
-  let len = {
+  {
     let start = if prev_child.is_some_and(|c| is_jsx_element(c.kind)) && text.as_bytes().get(1).is_some_and(|b| *b == b' ') {
       2
     }
@@ -110,6 +111,9 @@ pub(super) fn escape_jsx_text(children: &[Child], idx: &mut usize) -> Result<Str
     };
 
     if next_child.is_some_and(|c| is_jsx_element(c.kind)) {
+      // TODO: Use an offset to ignore the trailing whitespace added above
+      // this is necessary because accessing the last child's value won't
+      // return the compiled HTML escape sequence
       let bytes = children[*idx - 1].value.as_bytes();
       append_space = match bytes.iter().rposition(|b| !b.is_ascii_whitespace()) {
         Some(pos) => bytes.get(pos + 1),
@@ -118,10 +122,9 @@ pub(super) fn escape_jsx_text(children: &[Child], idx: &mut usize) -> Result<Str
       .is_some_and(|b| *b == b' ');
     }
 
-    remove_whitespace(&mut text[start..]) + start
+    fold_whitespace(Some(start..text.len()), &mut text)
   };
 
-  text.truncate(len);
   if append_space {
     write!(text, " \"")?;
   }
@@ -132,7 +135,12 @@ pub(super) fn escape_jsx_text(children: &[Child], idx: &mut usize) -> Result<Str
   Ok(text)
 }
 
-pub(super) fn remove_whitespace(s: &mut str) -> usize {
+fn utf8_bytes_to_u32(bytes: &[u8]) -> Result<u32, ParserError> {
+  Ok(str::from_utf8(bytes).map(|s| s.chars().next().unwrap() as u32)?)
+}
+
+pub(super) fn fold_whitespace(range: Option<Range<usize>>, s: &mut String) {
+  #[derive(Debug)]
   enum Step {
     Start,
     Space,
@@ -143,67 +151,117 @@ pub(super) fn remove_whitespace(s: &mut str) -> usize {
   let mut a = 0;
   let mut w = 0;
   let mut n = 0;
+  let initial_len = s.len();
   let mut len = s.len();
 
-  unsafe {
-    let s = s.as_bytes_mut();
-    let mut i = 0;
+  let bytes = unsafe {
+    if let Some(range) = range {
+      &mut s.as_bytes_mut()[range]
+    }
+    else {
+      s.as_bytes_mut()
+    }
+  };
+  let mut i = 0;
 
-    while let Some(byte) = s.get(i) {
-      if byte.is_ascii_whitespace() {
-        if matches!(step, Step::Alpha) {
-          w = usize::saturating_sub(w, 1);
-          s.copy_within(a..i, n);
-          n += i - a;
-          len -= w;
-          w = 0;
-        }
-
-        w += 1;
-        step = Step::Space;
+  while let Some(byte) = bytes.get(i) {
+    let (is_whitespace, offset) = match byte.leading_ones() as usize {
+      0 => (byte.is_ascii_whitespace(), 1),
+      n => {
+        (
+          matches!(
+            utf8_bytes_to_u32(&bytes[i..i + n]).expect("String is not valid UTF-8"),
+            0x00A0  // Non-Breaking Space
+            | 0x1680  // Ogham Space Mark
+            | 0x2000  // En Quad
+            | 0x2001  // Em Quad
+            | 0x2002  // En Space
+            | 0x2003  // Em Space
+            | 0x2004  // Three-Per-Em Space
+            | 0x2005  // Four-Per-Em Space
+            | 0x2006  // Six-Per-Em Space
+            | 0x2007  // Figure Space
+            | 0x2008  // Punctuation Space
+            | 0x2009  // Thin Space
+            | 0x200A  // Hair Space
+            | 0x200B  // Zero Width Space
+            | 0x202F  // Narrow No-Break Space
+            | 0x205F  // Medium Mathematical Space
+            | 0x3000  // Ideographic Space
+            | 0xFEFF // Zero Width No-Break Space (Word Joiner)
+          ),
+          n,
+        )
       }
-      else {
-        match step {
-          Step::Start => {
-            n += 1;
-          }
-          Step::Space => {
-            if n == 0 {
-              a = i;
-              w += 1;
-            }
-            else {
-              a = i - 1;
-              s[a] = b' ';
-            };
-            step = Step::Alpha;
-          }
-          Step::Alpha => {
-            step = Step::Alpha;
-          }
-        }
+    };
+
+    if is_whitespace {
+      if matches!(step, Step::Alpha) {
+        w = usize::saturating_sub(w, 1);
+        bytes.copy_within(a..i, n);
+        n += i - a;
+        len -= w;
+        w = 0;
       }
 
-      i += 1;
+      w += offset;
+      step = Step::Space;
+    }
+    else {
+      match step {
+        Step::Start => {
+          n += offset;
+        }
+        Step::Space => {
+          if n == 0 {
+            a = i;
+            w += 1;
+          }
+          else {
+            a = i - 1;
+            bytes[a] = b' ';
+          };
+          step = Step::Alpha;
+        }
+        Step::Alpha => {
+          step = Step::Alpha;
+        }
+      }
     }
 
-    if !matches!(step, Step::Start) {
-      w = usize::saturating_sub(w, 1);
+    i += offset;
+  }
 
-      if a != 0 {
-        s.copy_within(a..i, n);
-      }
+  if !matches!(step, Step::Start) {
+    w = usize::saturating_sub(w, 1);
 
-      if s.last().is_some_and(|b| b.is_ascii_whitespace()) {
-        len -= w + 1;
+    if a != 0 && matches!(step, Step::Alpha) {
+      bytes.copy_within(a..i, n);
+      if i < initial_len {
+        bytes[n + (i - a)] = unsafe { *bytes.as_ptr().add(i) };
       }
-      else {
-        len -= w;
-      }
+    }
+    else {
+      bytes[n] = b' ';
+    }
+
+    if bytes.last().is_some_and(|b| b.is_ascii_whitespace()) {
+      len -= w + 1;
+    }
+    else {
+      len -= w;
     }
   }
 
-  len
+  if len > 0 && len < initial_len {
+    let len = bytes.len() - (initial_len - len);
+    // Trying to truncate in a char boundary will crash
+    if bytes[len].leading_ones() > 0 {
+      bytes[len] = 0;
+    }
+  }
+
+  s.truncate(len);
 }
 
 pub(super) fn is_jsx_text(kind: &str) -> bool {

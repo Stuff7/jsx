@@ -1,5 +1,6 @@
 mod gen;
 mod utils;
+mod utils_tests;
 
 use crate::error::ParserError;
 use std::fmt::{Debug, Write};
