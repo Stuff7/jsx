@@ -75,6 +75,31 @@ pub(super) fn generate_event_var(event_name: &str) -> String {
   format!("{VAR_PREF}global_event_{event_name}")
 }
 
+fn parse_html_escape_sequence<W: Write>(html: &str, buf: &mut W) -> Result<(), std::fmt::Error> {
+  if let Some(code) = html.strip_prefix("&#") {
+    let code = &code[..code.len() - 1];
+
+    let dec = if let Some(hex) = code.strip_prefix("x") {
+      u32::from_str_radix(hex, 16).unwrap_or('�' as u32)
+    }
+    else {
+      code.parse::<u32>().unwrap_or('�' as u32)
+    };
+
+    write!(buf, "{}", char::from_u32(dec).unwrap_or('�'))
+  }
+  else {
+    match html {
+      "&nbsp;" => write!(buf, "\\xA0 "),
+      "&lt;" => write!(buf, "< "),
+      "&gt;" => write!(buf, "> "),
+      "&quot;" => write!(buf, "\\\" "),
+      "&amp;" => write!(buf, "& "),
+      v => write!(buf, "{v} "),
+    }
+  }
+}
+
 pub(super) fn escape_jsx_text(children: &[Child], idx: &mut usize) -> Result<String, ParserError> {
   let mut text = String::from("\"");
 
@@ -85,15 +110,7 @@ pub(super) fn escape_jsx_text(children: &[Child], idx: &mut usize) -> Result<Str
         write!(text, "{} ", child.value.replace('"', r#"\""#))?;
       }
       "html_character_reference" => {
-        match child.value {
-          "&nbsp;" => write!(text, "\\xA0 "),
-          "&lt;" => write!(text, "< "),
-          "&gt;" => write!(text, "> "),
-          "&#39;" => write!(text, "` "), // TODO: Handle all unicode i.e char::from_u32(39);
-          "&quot;" => write!(text, "\\\" "),
-          "&amp;" => write!(text, "& "),
-          v => write!(text, "{v} "),
-        }?;
+        parse_html_escape_sequence(child.value, &mut text)?;
       }
       _ => break,
     }
