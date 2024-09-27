@@ -7,7 +7,7 @@ use std::{
   io::{Read, Seek, SeekFrom, Write},
   path::{Path, PathBuf},
 };
-use tree_sitter::{Parser, Query, QueryCursor};
+use tree_sitter::{Language, Parser, Query, QueryCursor};
 
 const Q_IMPORTS: &str = include_str!("../queries/ts_imports.scm");
 
@@ -66,7 +66,7 @@ struct ImportParser {
 
 impl ImportParser {
   fn new() -> Result<Self, ParserError> {
-    let javascript = tree_sitter_javascript::language();
+    let javascript: Language = tree_sitter_javascript::LANGUAGE.into();
 
     let mut parser = Parser::new();
     parser.set_language(&javascript)?;

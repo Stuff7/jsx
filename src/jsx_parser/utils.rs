@@ -90,12 +90,12 @@ fn parse_html_escape_sequence<W: Write>(html: &str, buf: &mut W) -> Result<(), s
   }
   else {
     match html {
-      "&nbsp;" => write!(buf, "\\xA0 "),
-      "&lt;" => write!(buf, "< "),
-      "&gt;" => write!(buf, "> "),
-      "&quot;" => write!(buf, "\\\" "),
-      "&amp;" => write!(buf, "& "),
-      v => write!(buf, "{v} "),
+      "&nbsp;" => write!(buf, "\\xA0"),
+      "&lt;" => write!(buf, "<"),
+      "&gt;" => write!(buf, ">"),
+      "&quot;" => write!(buf, "\\\""),
+      "&amp;" => write!(buf, "&"),
+      v => write!(buf, "{v}"),
     }
   }
 }
@@ -107,7 +107,7 @@ pub(super) fn escape_jsx_text(children: &[Child], idx: &mut usize) -> Result<Str
   while let Some(child) = children.get(*idx) {
     match child.kind {
       "jsx_text" => {
-        write!(text, "{} ", child.value.replace('"', r#"\""#))?;
+        write!(text, "{}", child.value.replace('"', r#"\""#))?;
       }
       "html_character_reference" => {
         parse_html_escape_sequence(child.value, &mut text)?;
@@ -118,25 +118,25 @@ pub(super) fn escape_jsx_text(children: &[Child], idx: &mut usize) -> Result<Str
   }
   let next_child = children.get(*idx);
 
+  let bytes = &text.as_bytes()[1..];
   let mut append_space = false;
   {
-    let start = if prev_child.is_some_and(|c| is_jsx_element(c.kind)) && text.as_bytes().get(1).is_some_and(|b| *b == b' ') {
+    let start = if (prev_child.is_none() || prev_child.is_some_and(|c| is_jsx_element(c.kind)))
+      && bytes.iter().any(|b| !b.is_ascii_whitespace())
+      && bytes.first().is_some_and(|b| *b == b' ')
+    {
       2
     }
     else {
       1
     };
 
-    if next_child.is_some_and(|c| is_jsx_element(c.kind)) {
-      // TODO: Use an offset to ignore the trailing whitespace added above
-      // this is necessary because accessing the last child's value won't
-      // return the compiled HTML escape sequence
-      let bytes = children[*idx - 1].value.as_bytes();
-      append_space = match bytes.iter().rposition(|b| !b.is_ascii_whitespace()) {
-        Some(pos) => bytes.get(pos + 1),
-        None => bytes.first(),
-      }
-      .is_some_and(|b| *b == b' ');
+    if (next_child.is_none() || next_child.is_some_and(|c| is_jsx_element(c.kind))) && children[*idx - 1].kind == "jsx_text" {
+      append_space = bytes
+        .iter()
+        .rposition(|b| !b.is_ascii_whitespace())
+        .and_then(|pos| bytes.get(pos + 1))
+        .is_some_and(|b| *b == b' ');
     }
 
     fold_whitespace(Some(start..text.len()), &mut text)
@@ -254,7 +254,7 @@ pub(super) fn fold_whitespace(range: Option<Range<usize>>, s: &mut String) {
 
     if a != 0 && matches!(step, Step::Alpha) {
       bytes.copy_within(a..i, n);
-      if i < initial_len {
+      if i < initial_len - 1 {
         bytes[n + (i - a)] = unsafe { *bytes.as_ptr().add(i) };
       }
     }

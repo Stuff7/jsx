@@ -9,7 +9,7 @@ use std::{
   path::{Path, PathBuf},
   time::Instant,
 };
-use tree_sitter::{Parser, Query, QueryCapture, QueryCursor};
+use tree_sitter::{Language, Parser, Query, QueryCapture, QueryCursor};
 
 fn main() -> Result<(), ParserError> {
   let path = std::env::args().nth(1).ok_or(ParserError::MissingDir)?;
@@ -24,7 +24,7 @@ fn main() -> Result<(), ParserError> {
 const Q_PROPS: &str = include_str!("../queries/jsx_props.scm");
 
 pub fn parse<I: Iterator<Item = PathBuf>>(paths: I) -> Result<(), ParserError> {
-  let javascript = tree_sitter_javascript::language();
+  let javascript: Language = tree_sitter_javascript::LANGUAGE.into();
   let mut parser = Parser::new();
 
   parser.set_language(&javascript)?;
@@ -104,7 +104,7 @@ const Q_JSX_IDENT: &str = include_str!("../queries/jsx_ident.scm");
 
 #[allow(clippy::needless_borrows_for_generic_args)]
 pub fn find_jsx_ident<P: AsRef<Path>, I: Iterator<Item = P>>(source: &mut Vec<u8>, paths: I) -> Result<Option<&str>, ParserError> {
-  let javascript = tree_sitter_javascript::language();
+  let javascript: Language = tree_sitter_javascript::LANGUAGE.into();
   let mut parser = Parser::new();
 
   parser.set_language(&javascript)?;

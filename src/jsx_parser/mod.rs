@@ -1,10 +1,11 @@
 mod gen;
+mod gen_tests;
 mod utils;
 mod utils_tests;
 
 use crate::error::ParserError;
 use std::fmt::{Debug, Write};
-use tree_sitter::{Node, Parser, Query, QueryCapture, QueryCursor, QueryMatches, Tree};
+use tree_sitter::{Language, Node, Parser, Query, QueryCapture, QueryCursor, QueryMatches, Tree};
 pub use utils::GlobalState;
 
 pub const VAR_PREF: &str = "_jsx$";
@@ -18,7 +19,7 @@ pub struct JsxParser {
 
 impl JsxParser {
   pub fn new() -> Result<Self, ParserError> {
-    let javascript = tree_sitter_javascript::language();
+    let javascript: Language = tree_sitter_javascript::LANGUAGE.into();
     let mut parser = Parser::new();
     parser.set_language(&javascript)?;
 
