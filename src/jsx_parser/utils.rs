@@ -100,38 +100,59 @@ fn parse_html_escape_sequence<W: Write>(html: &str, buf: &mut W) -> Result<(), s
   }
 }
 
-pub(super) fn escape_jsx_text(children: &[Child], idx: &mut usize) -> Result<String, ParserError> {
-  let mut text = String::from("\"");
+pub(super) fn merge_jsx_text(children: &[Child], idx: &mut usize, escape: bool) -> Result<String, ParserError> {
+  let offset;
+  let surround;
+  if escape {
+    offset = 1;
+    surround = "\"";
+  }
+  else {
+    offset = 0;
+    surround = "";
+  }
+
+  let mut text = String::from(surround);
 
   let prev_child = (*idx > 0).then(|| children.get(*idx - 1)).flatten();
-  while let Some(child) = children.get(*idx) {
-    match child.kind {
-      "jsx_text" => {
+  if escape {
+    while let Some(child) = children.get(*idx) {
+      match child.kind {
+        "jsx_text" => {
+          write!(text, "{}", child.value.replace('"', r#"\""#))?;
+        }
+        "html_character_reference" => {
+          parse_html_escape_sequence(child.value, &mut text)?;
+        }
+        _ => break,
+      }
+      *idx += 1;
+    }
+  }
+  else {
+    while let Some(child) = children.get(*idx) {
+      if matches!(child.kind, "jsx_text" | "html_character_reference") {
         write!(text, "{}", child.value.replace('"', r#"\""#))?;
       }
-      "html_character_reference" => {
-        parse_html_escape_sequence(child.value, &mut text)?;
+      else {
+        break;
       }
-      _ => break,
+      *idx += 1;
     }
-    *idx += 1;
   }
   let next_child = children.get(*idx);
 
-  let bytes = &text.as_bytes()[1..];
+  let bytes = &text.as_bytes()[offset..];
   let mut append_space = false;
   {
-    let start = if (prev_child.is_none() || prev_child.is_some_and(|c| is_jsx_element(c.kind)))
-      && bytes.iter().any(|b| !b.is_ascii_whitespace())
-      && bytes.first().is_some_and(|b| *b == b' ')
-    {
-      2
+    let start = if (prev_child.is_none() || prev_child.is_some_and(|c| !is_jsx_text(c.kind))) && bytes.first().is_some_and(|b| *b == b' ') {
+      offset + 1
     }
     else {
-      1
+      offset
     };
 
-    if (next_child.is_none() || next_child.is_some_and(|c| is_jsx_element(c.kind))) && children[*idx - 1].kind == "jsx_text" {
+    if (next_child.is_none() || next_child.is_some_and(|c| !is_jsx_text(c.kind))) && children[*idx - 1].kind == "jsx_text" {
       append_space = bytes
         .iter()
         .rposition(|b| !b.is_ascii_whitespace())
@@ -143,10 +164,10 @@ pub(super) fn escape_jsx_text(children: &[Child], idx: &mut usize) -> Result<Str
   };
 
   if append_space {
-    write!(text, " \"")?;
+    write!(text, " {surround}")?;
   }
   else {
-    write!(text, "\"")?;
+    write!(text, "{surround}")?;
   }
 
   Ok(text)

@@ -1,6 +1,6 @@
 use super::{
   utils::{
-    escape_jsx_text, generate_event_var, is_jsx_element, is_jsx_text, is_reactive_kind, is_static_kind, replace_jsx, wrap_reactive_value, GlobalState,
+    generate_event_var, is_jsx_element, is_jsx_text, is_reactive_kind, is_static_kind, merge_jsx_text, replace_jsx, wrap_reactive_value, GlobalState,
   },
   JsxTemplate, VAR_PREF,
 };
@@ -73,10 +73,12 @@ impl<'a> JsxTemplate<'a> {
 
     let mut first_txt = false;
     write!(f, ">")?;
-    for child in &self.children {
+    let mut idx = 0;
+    while let Some(child) = self.children.get(idx) {
       if is_jsx_element(child.kind) {
         let Some(elem) = templates.iter().find(|t| *t == child)
         else {
+          idx += 1;
           continue;
         };
 
@@ -88,17 +90,17 @@ impl<'a> JsxTemplate<'a> {
         }
       }
       else if is_jsx_text(child.kind) {
-        if first_txt {
-          write!(f, "{}", child.value)?
+        let text = merge_jsx_text(&self.children, &mut idx, false)?;
+        if text.is_empty() {
+          continue;
         }
-        else {
-          first_txt = true;
-          write!(f, "{}", child.value.trim_start())?
-        }
+        write!(f, "{}", text)?;
+        idx -= 1;
       }
       else {
         write!(f, "<!>")?;
       }
+      idx += 1;
     }
     write!(f, "</{}>", self.tag)?;
 
@@ -115,7 +117,7 @@ impl<'a> JsxTemplate<'a> {
 
       while let Some(child) = self.children.get(idx) {
         let value = if is_jsx_text(child.kind) {
-          let escaped = escape_jsx_text(&self.children, &mut idx)?;
+          let escaped = merge_jsx_text(&self.children, &mut idx, true)?;
           if escaped == "\"\"" {
             continue;
           }

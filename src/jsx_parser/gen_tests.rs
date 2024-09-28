@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-  use crate::jsx_parser::{utils::escape_jsx_text, JsxParser, JsxTemplate, ParserError};
+  use crate::jsx_parser::{utils::merge_jsx_text, JsxParser, JsxTemplate, ParserError};
 
   macro_rules! parse_templates {
     (let $name: ident = $src: expr) => {
@@ -28,8 +28,12 @@ mod tests {
     assert_eq!(templates[0].children.len(), 1);
 
     let mut idx = 0;
-    let text = escape_jsx_text(&templates[0].children, &mut idx).expect("Text should parse");
+    let text = merge_jsx_text(&templates[0].children, &mut idx, true).expect("Text should parse");
     assert_eq!(text, "\"Basic text without special characters\"");
+
+    let mut idx = 0;
+    let text = merge_jsx_text(&templates[0].children, &mut idx, false).expect("Text should parse");
+    assert_eq!(text, "Basic text without special characters");
   }
 
   #[test]
@@ -42,8 +46,12 @@ mod tests {
     assert_eq!(templates[0].children.len(), 1);
 
     let mut idx = 0;
-    let text = escape_jsx_text(&templates[0].children, &mut idx).expect("Text should parse");
+    let text = merge_jsx_text(&templates[0].children, &mut idx, true).expect("Text should parse");
     assert_eq!(text, "\" Text between spaces \"");
+
+    let mut idx = 0;
+    let text = merge_jsx_text(&templates[0].children, &mut idx, false).expect("Text should parse");
+    assert_eq!(text, " Text between spaces ");
   }
 
   #[test]
@@ -56,8 +64,12 @@ mod tests {
     assert_eq!(templates[0].children.len(), 8);
 
     let mut idx = 0;
-    let text = escape_jsx_text(&templates[0].children, &mut idx).expect("Text should parse");
+    let text = merge_jsx_text(&templates[0].children, &mut idx, true).expect("Text should parse");
     assert_eq!(text, "\"Text with \\xA0 entities & symbols < >\"");
+
+    let mut idx = 0;
+    let text = merge_jsx_text(&templates[0].children, &mut idx, false).expect("Text should parse");
+    assert_eq!(text, "Text with &nbsp; entities &amp; symbols &lt; &gt;");
   }
 
   #[test]
@@ -75,8 +87,12 @@ mod tests {
     assert_eq!(templates[0].children.len(), 1);
 
     let mut idx = 0;
-    let text = escape_jsx_text(&templates[0].children, &mut idx).expect("Text should parse");
+    let text = merge_jsx_text(&templates[0].children, &mut idx, true).expect("Text should parse");
     assert_eq!(text, "\"Text with multiple spaces\"");
+
+    let mut idx = 0;
+    let text = merge_jsx_text(&templates[0].children, &mut idx, false).expect("Text should parse");
+    assert_eq!(text, "Text with multiple spaces");
   }
 
   #[test]
@@ -94,16 +110,28 @@ mod tests {
     assert_eq!(templates[1].children.len(), 3);
 
     let mut idx = 0;
-    let text = escape_jsx_text(&templates[1].children, &mut idx).expect("Text should parse");
+    let text = merge_jsx_text(&templates[1].children, &mut idx, true).expect("Text should parse");
     assert_eq!(text, "\"Text before \"");
 
     idx += 1;
-    let text = escape_jsx_text(&templates[1].children, &mut idx).expect("Text should parse");
+    let text = merge_jsx_text(&templates[1].children, &mut idx, true).expect("Text should parse");
     assert_eq!(text, "\" text after\"");
 
     idx = 0;
-    let text = escape_jsx_text(&templates[0].children, &mut idx).expect("Text should parse");
+    let text = merge_jsx_text(&templates[0].children, &mut idx, true).expect("Text should parse");
     assert_eq!(text, "\"inner text\"");
+
+    let mut idx = 0;
+    let text = merge_jsx_text(&templates[1].children, &mut idx, false).expect("Text should parse");
+    assert_eq!(text, "Text before ");
+
+    idx += 1;
+    let text = merge_jsx_text(&templates[1].children, &mut idx, false).expect("Text should parse");
+    assert_eq!(text, " text after");
+
+    idx = 0;
+    let text = merge_jsx_text(&templates[0].children, &mut idx, false).expect("Text should parse");
+    assert_eq!(text, "inner text");
   }
 
   #[test]
@@ -122,16 +150,28 @@ mod tests {
     assert_eq!(templates[1].children.len(), 3);
 
     let mut idx = 0;
-    let text = escape_jsx_text(&templates[0].children, &mut idx).expect("Text should parse");
+    let text = merge_jsx_text(&templates[0].children, &mut idx, true).expect("Text should parse");
     assert_eq!(text, "\"inner text\"");
 
     idx = 0;
-    let text = escape_jsx_text(&templates[1].children, &mut idx).expect("Text should parse");
+    let text = merge_jsx_text(&templates[1].children, &mut idx, true).expect("Text should parse");
     assert_eq!(text, "\"Text before\"");
 
     idx += 1;
-    let text = escape_jsx_text(&templates[1].children, &mut idx).expect("Text should parse");
+    let text = merge_jsx_text(&templates[1].children, &mut idx, true).expect("Text should parse");
     assert_eq!(text, "\"text after\"");
+
+    let mut idx = 0;
+    let text = merge_jsx_text(&templates[0].children, &mut idx, false).expect("Text should parse");
+    assert_eq!(text, "inner text");
+
+    idx = 0;
+    let text = merge_jsx_text(&templates[1].children, &mut idx, false).expect("Text should parse");
+    assert_eq!(text, "Text before");
+
+    idx += 1;
+    let text = merge_jsx_text(&templates[1].children, &mut idx, false).expect("Text should parse");
+    assert_eq!(text, "text after");
   }
 
   #[test]
@@ -144,8 +184,12 @@ mod tests {
     assert_eq!(templates[0].children.len(), 1);
 
     let mut idx = 0;
-    let text = escape_jsx_text(&templates[0].children, &mut idx).expect("Text should parse");
-    assert_eq!(text, "\"\"");
+    let text = merge_jsx_text(&templates[0].children, &mut idx, true).expect("Text should parse");
+    assert_eq!(text, "\" \"");
+
+    let mut idx = 0;
+    let text = merge_jsx_text(&templates[0].children, &mut idx, false).expect("Text should parse");
+    assert_eq!(text, " ");
   }
 
   #[test]
@@ -165,29 +209,104 @@ mod tests {
     assert_eq!(templates[1].children.len(), 3);
 
     let mut idx = 0;
-    let text = escape_jsx_text(&templates[1].children, &mut idx).expect("Text should parse");
+    let text = merge_jsx_text(&templates[1].children, &mut idx, true).expect("Text should parse");
     assert_eq!(text, "\"Outer text \"");
 
     idx = 0;
-    let text = escape_jsx_text(&templates[0].children, &mut idx).expect("Text should parse");
+    let text = merge_jsx_text(&templates[0].children, &mut idx, true).expect("Text should parse");
     assert_eq!(text, "\" Inner text \"");
 
     idx += 1;
-    let text = escape_jsx_text(&templates[1].children, &mut idx).expect("Text should parse");
+    let text = merge_jsx_text(&templates[1].children, &mut idx, true).expect("Text should parse");
     assert_eq!(text, "\"More outer text\"");
+
+    let mut idx = 0;
+    let text = merge_jsx_text(&templates[1].children, &mut idx, false).expect("Text should parse");
+    assert_eq!(text, "Outer text ");
+
+    idx = 0;
+    let text = merge_jsx_text(&templates[0].children, &mut idx, false).expect("Text should parse");
+    assert_eq!(text, " Inner text ");
+
+    idx += 1;
+    let text = merge_jsx_text(&templates[1].children, &mut idx, false).expect("Text should parse");
+    assert_eq!(text, "More outer text");
   }
 
   #[test]
   fn test_unicode_characters_with_spaces() {
     parse_templates!(
-      let templates = "<SomeComponent>  Unicode text  with   emojis 😊 and non-ASCII &#xFFFC; &#120120; characters: äöüß   </SomeComponent>".as_bytes()
+      let templates = "<div>  Unicode text  with   emojis 😊 and non-ASCII &#xFFFC; &#120120; characters: äöüß   </div>".as_bytes()
     );
 
-    assert_eq!(templates[0].tag, "SomeComponent");
+    assert_eq!(templates[0].tag, "div");
     assert_eq!(templates[0].children.len(), 5);
 
     let mut idx = 0;
-    let text = escape_jsx_text(&templates[0].children, &mut idx).expect("Text should parse");
+    let text = merge_jsx_text(&templates[0].children, &mut idx, true).expect("Text should parse");
     assert_eq!(text, "\" Unicode text with emojis 😊 and non-ASCII ￼ 𝔸 characters: äöüß \"");
+
+    let mut idx = 0;
+    let text = merge_jsx_text(&templates[0].children, &mut idx, false).expect("Text should parse");
+    assert_eq!(text, " Unicode text with emojis 😊 and non-ASCII &#xFFFC; &#120120; characters: äöüß ");
+  }
+
+  #[test]
+  fn test_jsx_expressions() {
+    parse_templates!(
+      let templates = br#"
+        <span>
+          Some text {someVar} ok {15} {`${6}`} {1e3} {"then"}
+          <div>
+            <i>lol</i>
+            ok
+            <input />
+          </div>
+        </span>
+      "#
+    );
+
+    assert_eq!(templates[0].tag, "i");
+    assert_eq!(templates[0].children.len(), 1);
+
+    assert_eq!(templates[1].tag, "input");
+
+    assert_eq!(templates[2].tag, "div");
+    assert_eq!(templates[2].children.len(), 3);
+
+    assert_eq!(templates[3].tag, "span");
+    assert_eq!(templates[3].children.len(), 11);
+
+    let mut idx = 0;
+    let text = merge_jsx_text(&templates[0].children, &mut idx, true).expect("Text should parse");
+    assert_eq!(text, "\"lol\"");
+
+    let mut idx = 1;
+    let text = merge_jsx_text(&templates[2].children, &mut idx, true).expect("Text should parse");
+    assert_eq!(text, "\"ok\"");
+
+    let mut idx = 0;
+    let text = merge_jsx_text(&templates[3].children, &mut idx, true).expect("Text should parse");
+    assert_eq!(text, "\"Some text \"");
+
+    idx += 1;
+    let text = merge_jsx_text(&templates[3].children, &mut idx, true).expect("Text should parse");
+    assert_eq!(text, "\" ok \"");
+
+    let mut idx = 0;
+    let text = merge_jsx_text(&templates[0].children, &mut idx, false).expect("Text should parse");
+    assert_eq!(text, "lol");
+
+    let mut idx = 1;
+    let text = merge_jsx_text(&templates[2].children, &mut idx, false).expect("Text should parse");
+    assert_eq!(text, "ok");
+
+    let mut idx = 0;
+    let text = merge_jsx_text(&templates[3].children, &mut idx, false).expect("Text should parse");
+    assert_eq!(text, "Some text ");
+
+    idx += 1;
+    let text = merge_jsx_text(&templates[3].children, &mut idx, false).expect("Text should parse");
+    assert_eq!(text, " ok ");
   }
 }
