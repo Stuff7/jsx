@@ -71,7 +71,6 @@ impl<'a> JsxTemplate<'a> {
       return Ok(f);
     }
 
-    let mut first_txt = false;
     write!(f, ">")?;
     let mut idx = 0;
     while let Some(child) = self.children.get(idx) {
@@ -307,7 +306,8 @@ impl<'a> JsxTemplate<'a> {
     }
 
     let mut first = true;
-    for child in &self.children {
+    let mut idx = 0;
+    while let Some(child) = self.children.get(idx) {
       *var_idx += 1;
       let prev_var = var;
       var = format!("{VAR_PREF}el{}", *var_idx);
@@ -324,6 +324,7 @@ impl<'a> JsxTemplate<'a> {
         "jsx_element" | "jsx_self_closing_element" => {
           let Some(elem) = templates.iter().find(|t| *t == child)
           else {
+            idx += 1;
             continue;
           };
 
@@ -370,8 +371,20 @@ impl<'a> JsxTemplate<'a> {
             writeln!(elem_setup, "{VAR_PREF}insertChild({var}, {});", value)?;
           }
         }
-        _ => (),
+        _ => {
+          while let Some(child) = self.children.get(idx) {
+            if is_jsx_text(child.kind) {
+              idx += 1;
+              continue;
+            }
+            else {
+              idx -= 1;
+              break;
+            }
+          }
+        }
       }
+      idx += 1;
     }
 
     Ok((elem_vars, elem_setup))

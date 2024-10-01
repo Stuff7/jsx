@@ -1,4 +1,4 @@
-use super::{Child, VAR_PREF};
+use super::{html_entities::parse_html_escape_sequence, Child, VAR_PREF};
 use crate::{error::ParserError, jsx_parser::JsxTemplate};
 use core::str;
 use std::{borrow::Cow, collections::HashSet, fmt::Write, ops::Range};
@@ -73,31 +73,6 @@ impl GlobalState {
 
 pub(super) fn generate_event_var(event_name: &str) -> String {
   format!("{VAR_PREF}global_event_{event_name}")
-}
-
-fn parse_html_escape_sequence<W: Write>(html: &str, buf: &mut W) -> Result<(), std::fmt::Error> {
-  if let Some(code) = html.strip_prefix("&#") {
-    let code = &code[..code.len() - 1];
-
-    let dec = if let Some(hex) = code.strip_prefix("x") {
-      u32::from_str_radix(hex, 16).unwrap_or('�' as u32)
-    }
-    else {
-      code.parse::<u32>().unwrap_or('�' as u32)
-    };
-
-    write!(buf, "{}", char::from_u32(dec).unwrap_or('�'))
-  }
-  else {
-    match html {
-      "&nbsp;" => write!(buf, "\\xA0"),
-      "&lt;" => write!(buf, "<"),
-      "&gt;" => write!(buf, ">"),
-      "&quot;" => write!(buf, "\\\""),
-      "&amp;" => write!(buf, "&"),
-      v => write!(buf, "{v}"),
-    }
-  }
 }
 
 pub(super) fn merge_jsx_text(children: &[Child], idx: &mut usize, escape: bool) -> Result<String, ParserError> {

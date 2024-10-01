@@ -1,5 +1,6 @@
 mod gen;
 mod gen_tests;
+mod html_entities;
 mod utils;
 mod utils_tests;
 
