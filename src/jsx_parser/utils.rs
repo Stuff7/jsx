@@ -19,6 +19,7 @@ pub(super) fn is_reactive_kind(kind: &str) -> bool {
       | "object"
       | "array"
       | "call_expression"
+      | "jsx_expression"
   )
 }
 
@@ -40,17 +41,30 @@ pub(super) fn wrap_reactive_value<'a>(kind: &str, value: &'a str) -> Cow<'a, str
 
 #[derive(Default)]
 pub struct GlobalState {
+  pub(super) import_path: Cow<'static, str>,
   pub(super) events: HashSet<Box<str>>,
   pub(super) imports: HashSet<&'static str>,
   pub(super) templates: HashSet<usize>,
   pub(super) is_component_child: bool,
+  pub(super) is_template_child: bool,
+  pub(super) parsing_conditional: bool,
 }
 
 impl GlobalState {
+  pub fn new(import_path: Option<String>) -> Self {
+    Self {
+      import_path: match import_path {
+        Some(p) => Cow::Owned(p),
+        None => Cow::Borrowed("jsx/runtime"),
+      },
+      ..Default::default()
+    }
+  }
+
   pub fn generate_setup_js(&mut self, templates: &[JsxTemplate]) -> Result<String, ParserError> {
     let mut setup = String::with_capacity(self.imports.len() * 128);
     for import in &self.imports {
-      writeln!(setup, "import {{ {import} as {VAR_PREF}{import} }} from \"jsx/runtime\";")?;
+      writeln!(setup, "import {{ {import} as {VAR_PREF}{import} }} from \"{}\";", self.import_path)?;
     }
     writeln!(setup)?;
     self.imports.clear();

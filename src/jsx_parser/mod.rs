@@ -8,6 +8,7 @@ use crate::error::ParserError;
 use std::fmt::{Debug, Write};
 use tree_sitter::{Language, Node, Parser, Query, QueryCapture, QueryCursor, QueryMatches, Tree};
 pub use utils::GlobalState;
+use utils::{is_jsx_element, is_reactive_kind};
 
 pub const VAR_PREF: &str = "_jsx$";
 const Q_JSX_TEMPLATE: &str = include_str!("../../queries/jsx_template.scm");
@@ -42,7 +43,6 @@ impl JsxParser {
 
 #[derive(Debug)]
 pub struct TemplateParts {
-  pub imports: String,
   pub create_fn: String,
 }
 
@@ -69,7 +69,7 @@ impl<'a> PartialEq<Child<'a>> for JsxTemplate<'a> {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct JsxTemplate<'a> {
   id: usize,
   pub start: usize,
@@ -77,6 +77,7 @@ pub struct JsxTemplate<'a> {
   tag: &'a str,
   is_self_closing: bool,
   pub is_root: bool,
+  conditional: Option<Prop<'a>>,
   props: Vec<Prop<'a>>,
   children: Vec<Child<'a>>,
 }
@@ -99,16 +100,7 @@ impl<'a> JsxTemplate<'a> {
       Element,
     }
 
-    let mut ret = Self {
-      id: 0,
-      start: 0,
-      end: 0,
-      tag: "",
-      is_self_closing: false,
-      is_root: false,
-      props: Vec::new(),
-      children: Vec::new(),
-    };
+    let mut ret = Self::default();
 
     for cap in captures {
       match cap.index {
@@ -124,10 +116,18 @@ impl<'a> JsxTemplate<'a> {
           });
         }
         x if x == CaptureIdx::Value as u32 => {
-          if let Some(p) = ret.props.last_mut() {
+          let is_conditional = if let Some(p) = ret.props.last_mut() {
             p.kind = cap.node.kind();
             p.value = Some(cap.node.utf8_text(source)?);
             p.node = cap.node;
+            p.key == "$if"
+          }
+          else {
+            false
+          };
+
+          if is_conditional {
+            ret.conditional = ret.props.pop();
           }
         }
         x if x == CaptureIdx::Children as u32 => ret.children.push(Child {
@@ -163,15 +163,42 @@ impl<'a> JsxTemplate<'a> {
     Ok(ret)
   }
 
-  pub fn parts(&self, templates: &[JsxTemplate], state: &mut GlobalState) -> Result<TemplateParts, ParserError> {
-    let mut var_idx = 0;
-    let mut ret = TemplateParts {
-      imports: String::new(),
-      create_fn: String::new(),
-    };
+  fn write_fn(&self, ret: &mut TemplateParts, var_idx: &mut usize, templates: &[JsxTemplate], state: &mut GlobalState) -> Result<(), ParserError> {
+    let (elem_vars, elem_hooks) = self.generate_fn(var_idx, templates, state)?;
+    write!(ret.create_fn, "(() => {{\n{elem_vars}\n{elem_hooks}\nreturn {VAR_PREF}el0;\n}})")?;
+    if self.conditional.is_none() {
+      write!(ret.create_fn, "()")?;
+    }
 
-    let (elem_vars, elem_hooks) = self.generate_fn(&mut var_idx, templates, state)?;
-    write!(ret.create_fn, "(() => {{\n{elem_vars}\n{elem_hooks}\nreturn {VAR_PREF}el0;\n}})()",)?;
+    Ok(())
+  }
+
+  pub fn parts(&self, templates: &[JsxTemplate], state: &mut GlobalState) -> Result<TemplateParts, ParserError> {
+    let mut ret = TemplateParts { create_fn: String::new() };
+
+    if self.tag == "template" {
+      write!(ret.create_fn, "[")?;
+      let mut idx = 0;
+      while let Some(c) = self.children.get(idx) {
+        state.is_template_child = true;
+        let Some(value) = self.child_as_value(&mut idx, c, templates, state)?
+        else {
+          continue;
+        };
+
+        if is_reactive_kind(c.kind) {
+          write!(ret.create_fn, "() => {value}, ")?;
+        }
+        else {
+          write!(ret.create_fn, "{value}, ")?;
+        }
+      }
+      writeln!(ret.create_fn, "]")?;
+    }
+    else {
+      let mut var_idx = 0;
+      self.write_fn(&mut ret, &mut var_idx, templates, state)?;
+    }
 
     Ok(ret)
   }
