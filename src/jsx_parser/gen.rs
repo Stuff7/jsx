@@ -252,12 +252,14 @@ impl<'a> JsxTemplate<'a> {
       })
       .transpose()?
       .unwrap_or("default");
+
     state.imports.insert("insertChild");
     if !*slots_defined {
       writeln!(elem_vars, "const $$slots = window.$$slots;")?;
       *slots_defined = true;
     }
     writeln!(elem_setup, "{VAR_PREF}insertChild({var}, $$slots[\"{name}\"]);")?;
+
     Ok(())
   }
 
@@ -280,17 +282,14 @@ impl<'a> JsxTemplate<'a> {
     let mut elem_setup = String::new();
 
     let mut slots_defined = false;
-    // TODO: slots within deep components
-    // <CompA><CompB><slot /></CompB></CompA>
-    // if self.tag == "slot" {
-    //   write!(elem_setup, "return ")?;
-    //   self.replace_slot(&mut elem_vars, &mut elem_setup, &var, state, &mut slots_defined, None)?;
-    //   return Ok((elem_vars, elem_setup));
-    // }
+    // TODO: slots within deep components <CompA><CompB><slot /></CompB></CompA>
+    if self.tag == "slot" {
+      self.replace_slot(&mut elem_vars, &mut elem_setup, &var, state, &mut slots_defined, None)?;
+    }
 
-    if self.is_root && !state.parsing_conditional {
+    if self.is_root && !state.parsing_special_root {
       if let Some(cond) = &self.conditional {
-        state.parsing_conditional = true;
+        state.parsing_special_root = true;
         state.imports.insert("conditionalRender");
         let parts = self.parts(templates, state)?;
         writeln!(
@@ -299,12 +298,12 @@ impl<'a> JsxTemplate<'a> {
           &parts.create_fn[..parts.create_fn.len() - 2],
           wrap_reactive_value(cond.kind, cond.value.unwrap_or("true"))
         )?;
-        state.parsing_conditional = false;
+        state.parsing_special_root = false;
 
         return Ok((elem_setup, elem_vars));
       }
       else if let Some((name, prop)) = &self.transition {
-        state.parsing_conditional = true;
+        state.parsing_special_root = true;
         state.imports.insert("createTransition");
         let parts = self.parts(templates, state)?;
         writeln!(
@@ -313,7 +312,7 @@ impl<'a> JsxTemplate<'a> {
           &parts.create_fn[..parts.create_fn.len() - 2],
           wrap_reactive_value(prop.kind, prop.value.unwrap_or("true"))
         )?;
-        state.parsing_conditional = false;
+        state.parsing_special_root = false;
 
         return Ok((elem_setup, elem_vars));
       }

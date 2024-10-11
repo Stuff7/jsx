@@ -47,7 +47,7 @@ pub struct GlobalState {
   pub(super) templates: HashSet<usize>,
   pub(super) is_component_child: bool,
   pub(super) is_template_child: bool,
-  pub(super) parsing_conditional: bool,
+  pub(super) parsing_special_root: bool,
 }
 
 impl GlobalState {
