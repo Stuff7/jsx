@@ -83,7 +83,7 @@ impl<'a> JsxTemplate<'a> {
           continue;
         };
 
-        if elem.is_component() || elem.conditional.is_some() {
+        if elem.is_component() || elem.conditional.is_some() || elem.transition.is_some() {
           write!(f, "<!>")?;
         }
         else {
@@ -295,9 +295,23 @@ impl<'a> JsxTemplate<'a> {
         let parts = self.parts(templates, state)?;
         writeln!(
           elem_vars,
-          "const {var} = {VAR_PREF}conditionalRender(null, null, {}, {});",
-          parts.create_fn,
+          "const {var} = {VAR_PREF}conditionalRender(document.createComment(\"\"), {}, {});",
+          &parts.create_fn[..parts.create_fn.len() - 2],
           wrap_reactive_value(cond.kind, cond.value.unwrap_or("true"))
+        )?;
+        state.parsing_conditional = false;
+
+        return Ok((elem_setup, elem_vars));
+      }
+      else if let Some((name, prop)) = &self.transition {
+        state.parsing_conditional = true;
+        state.imports.insert("createTransition");
+        let parts = self.parts(templates, state)?;
+        writeln!(
+          elem_vars,
+          "const {var} = {VAR_PREF}createTransition(document.createComment(\"\"), {}, {}, \"{name}\");",
+          &parts.create_fn[..parts.create_fn.len() - 2],
+          wrap_reactive_value(prop.kind, prop.value.unwrap_or("true"))
         )?;
         state.parsing_conditional = false;
 
@@ -305,16 +319,17 @@ impl<'a> JsxTemplate<'a> {
       }
     }
 
-    if self.is_root || state.is_component_child || self.conditional.is_some() || state.is_template_child {
+    if self.is_root || state.is_component_child || self.conditional.is_some() || self.transition.is_some() || state.is_template_child {
       state.imports.insert("template");
       state.templates.insert(self.id);
       writeln!(
         elem_vars,
-        "const {var} = {VAR_PREF}templ{}(); // root[{}]/component[{}]/conditional[{}]/template-child[{}]",
+        "const {var} = {VAR_PREF}templ{}(); // root[{}]/component[{}]/conditional[{}]/transition[{}]/template-child[{}]",
         self.id,
         self.is_root,
         state.is_component_child,
         self.conditional.is_some(),
+        self.transition.is_some(),
         state.is_template_child
       )?;
       state.is_template_child = false;
@@ -333,7 +348,8 @@ impl<'a> JsxTemplate<'a> {
 
       if prop.key.contains(':') {
         if let Some(event_name) = prop.key.strip_prefix("on:") {
-          writeln!(elem_setup, "{var}.addEventListener(\"{event_name}\", {value});")?;
+          state.imports.insert("addLocalEvent");
+          writeln!(elem_setup, "{VAR_PREF}addLocalEvent({var}, \"{event_name}\", {value});")?;
         }
         else if let Some(event_name) = prop.key.strip_prefix("g:on") {
           if state.events.insert(event_name.into()) {
@@ -378,14 +394,18 @@ impl<'a> JsxTemplate<'a> {
       else if prop.key == "$ref" {
         writeln!(elem_setup, "{value} = {var};")?;
       }
-      else {
+      else if let Some(key) = prop.key.strip_prefix('$') {
         state.imports.insert("trackAttribute");
         writeln!(
           elem_setup,
           "{VAR_PREF}trackAttribute({var}, \"{}\", {});",
-          prop.key,
+          key,
           wrap_reactive_value(prop.kind, &value)
         )?;
+      }
+      else {
+        state.imports.insert("setAttribute");
+        writeln!(elem_setup, "{VAR_PREF}setAttribute({var}, \"{}\", {});", prop.key, &value)?;
       }
     }
 
@@ -426,8 +446,18 @@ impl<'a> JsxTemplate<'a> {
             let parts = elem.parts(templates, state)?;
             writeln!(
               elem_setup,
-              "{VAR_PREF}conditionalRender({VAR_PREF}el0, {var}, {}, {});",
-              parts.create_fn,
+              "{VAR_PREF}conditionalRender({var}, {}, {});",
+              &parts.create_fn[..parts.create_fn.len() - 2],
+              wrap_reactive_value(cond.kind, cond.value.unwrap_or("true"))
+            )?;
+          }
+          else if let Some((name, cond)) = &elem.transition {
+            state.imports.insert("createTransition");
+            let parts = elem.parts(templates, state)?;
+            writeln!(
+              elem_setup,
+              "{VAR_PREF}createTransition({var}, {}, {}, \"{name}\");",
+              &parts.create_fn[..parts.create_fn.len() - 2],
               wrap_reactive_value(cond.kind, cond.value.unwrap_or("true"))
             )?;
           }

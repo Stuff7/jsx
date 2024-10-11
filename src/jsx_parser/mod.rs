@@ -78,6 +78,7 @@ pub struct JsxTemplate<'a> {
   is_self_closing: bool,
   pub is_root: bool,
   conditional: Option<Prop<'a>>,
+  transition: Option<(Box<str>, Prop<'a>)>,
   props: Vec<Prop<'a>>,
   children: Vec<Child<'a>>,
 }
@@ -116,18 +117,24 @@ impl<'a> JsxTemplate<'a> {
           });
         }
         x if x == CaptureIdx::Value as u32 => {
-          let is_conditional = if let Some(p) = ret.props.last_mut() {
+          let (is_conditional, transition) = if let Some(p) = ret.props.last_mut() {
             p.kind = cap.node.kind();
             p.value = Some(cap.node.utf8_text(source)?);
             p.node = cap.node;
-            p.key == "$if"
+            (
+              p.key == "$if",
+              p.key.strip_prefix("$transition").map(|t| t.strip_prefix(':').unwrap_or("jsx")),
+            )
           }
           else {
-            false
+            (false, None)
           };
 
           if is_conditional {
             ret.conditional = ret.props.pop();
+          }
+          else if let Some(transition_name) = transition {
+            ret.transition = ret.props.pop().map(|prop| (transition_name.into(), prop));
           }
         }
         x if x == CaptureIdx::Children as u32 => ret.children.push(Child {
@@ -165,10 +172,7 @@ impl<'a> JsxTemplate<'a> {
 
   fn write_fn(&self, ret: &mut TemplateParts, var_idx: &mut usize, templates: &[JsxTemplate], state: &mut GlobalState) -> Result<(), ParserError> {
     let (elem_vars, elem_hooks) = self.generate_fn(var_idx, templates, state)?;
-    write!(ret.create_fn, "(() => {{\n{elem_vars}\n{elem_hooks}\nreturn {VAR_PREF}el0;\n}})")?;
-    if self.conditional.is_none() {
-      write!(ret.create_fn, "()")?;
-    }
+    write!(ret.create_fn, "(() => {{\n{elem_vars}\n{elem_hooks}\nreturn {VAR_PREF}el0;\n}})()")?;
 
     Ok(())
   }
