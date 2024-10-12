@@ -4,11 +4,11 @@ mod jsx_parser;
 
 use error::ParserError;
 use jsx_parser::{GlobalState, JsxParser, JsxTemplate};
-use std::{env, fs, io::Read, time::Instant};
+use std::{env, fs, io::Read, path::PathBuf, time::Instant};
 
 fn main() -> Result<(), ParserError> {
-  let args = CLIArgs::read()?;
-  let paths = dir::RecursiveDirIterator::new(args.dir)?.filter(|p| {
+  let args = CliArgs::read()?;
+  let paths = dir::RecursiveDirIterator::new(&args.dir)?.filter(|p| {
     let Some(ext) = p.extension().and_then(|n| n.to_str())
     else {
       return false;
@@ -19,10 +19,11 @@ fn main() -> Result<(), ParserError> {
   let t = Instant::now();
   let mut parser = JsxParser::new()?;
   let mut source = Vec::new();
+  let mut outbuf = Vec::new();
   let mut state = GlobalState::new(args.import_path);
 
   for path in paths {
-    let mut file = fs::OpenOptions::new().read(true).write(true).open(path)?;
+    let mut file = fs::OpenOptions::new().read(true).write(true).open(&path)?;
     file.read_to_end(&mut source)?;
 
     let tree = parser.tree(&source)?;
@@ -48,7 +49,9 @@ fn main() -> Result<(), ParserError> {
       .collect::<Result<Box<_>, _>>()?;
 
     let mut src_idx = 0;
-    let mut outbuf = Vec::with_capacity(source.len());
+    if source.len() > outbuf.capacity() {
+      outbuf.reserve(source.len() - outbuf.capacity());
+    }
     outbuf.extend_from_slice(state.generate_setup_js(&templates)?.as_bytes());
 
     for (template, parts) in template_parts.iter().rev() {
@@ -61,8 +64,11 @@ fn main() -> Result<(), ParserError> {
       outbuf.extend_from_slice(&source[src_idx..]);
     }
 
-    println!("{}", std::str::from_utf8(&outbuf)?);
+    let outpath = args.outdir.join(path.strip_prefix(&args.dir).expect("path is not child of input dir"));
+    fs::create_dir_all(outpath.parent().expect("no input dir"))?;
+    fs::write(outpath, &outbuf)?;
 
+    outbuf.clear();
     source.clear();
   }
   println!("// Done in {:?}", t.elapsed());
@@ -71,22 +77,27 @@ fn main() -> Result<(), ParserError> {
 }
 
 #[derive(Debug)]
-pub struct CLIArgs {
+pub struct CliArgs {
   pub dir: String,
   pub import_path: Option<String>,
+  pub outdir: PathBuf,
 }
 
-impl CLIArgs {
+impl CliArgs {
   pub fn read() -> Result<Self, ParserError> {
-    let mut found = false;
-
     Ok(Self {
       dir: env::args().nth(1).ok_or(ParserError::MissingDir)?,
-      import_path: env::args().find(|arg| {
-        let ret = found;
-        found = arg == "-import";
-        ret
-      }),
+      import_path: Self::find_flag("-import"),
+      outdir: PathBuf::from(Self::find_flag("-out").unwrap_or("build".into())),
+    })
+  }
+
+  fn find_flag(name: &str) -> Option<String> {
+    let mut found = false;
+    env::args().find(|arg| {
+      let ret = found;
+      found = arg == name;
+      ret
     })
   }
 }

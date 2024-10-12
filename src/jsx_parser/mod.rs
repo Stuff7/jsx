@@ -170,6 +170,10 @@ impl<'a> JsxTemplate<'a> {
       }
     }
 
+    if ret.tag.is_empty() {
+      ret.tag = "template";
+    }
+
     Ok(ret)
   }
 

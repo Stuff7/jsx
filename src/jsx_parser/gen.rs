@@ -187,11 +187,18 @@ impl<'a> JsxTemplate<'a> {
     else {
       write!(f, "{{")?;
       for prop in &self.props {
+        let key = if prop.key.contains(':') {
+          Cow::Owned(format!("\"{}\"", prop.key))
+        }
+        else {
+          Cow::Borrowed(prop.key)
+        };
+
         if prop.kind == "string_fragment" {
           write!(
             f,
             "{}: \"{}\", ",
-            prop.key,
+            key,
             prop
               .value
               .ok_or_else(|| ParserError::msg("\"string_fragment\" prop kind must have a value", prop.node))?
@@ -206,17 +213,16 @@ impl<'a> JsxTemplate<'a> {
               .ok_or_else(|| ParserError::msg("Reactive props must have a value", prop.node))?,
             state,
           )?;
-
-          write!(f, "get {}() {{ return {v} }}, ", prop.key)?;
+          write!(f, "get {}() {{ return {v} }}, ", key)?;
           if prop.key.starts_with('$') {
-            write!(f, "set {}({VAR_PREF}v) {{ {v} = {VAR_PREF}v }}, ", prop.key)?;
+            write!(f, "set {}({VAR_PREF}v) {{ {v} = {VAR_PREF}v }}, ", key)?;
           }
         }
         else if let Some(value) = prop.value {
-          write!(f, "{}: {}, ", prop.key, replace_jsx(prop.node, templates, value, state)?)?;
+          write!(f, "{}: {}, ", key, replace_jsx(prop.node, templates, value, state)?)?;
         }
         else {
-          write!(f, "{}: true, ", prop.key)?;
+          write!(f, "{}: true, ", key)?;
         }
       }
       write!(f, "}}")?;
@@ -285,12 +291,12 @@ impl<'a> JsxTemplate<'a> {
     let mut elem_setup = String::new();
 
     let mut slots_defined = false;
-    // TODO: slots within deep components <CompA><CompB><slot /></CompB></CompA>
     if self.tag == "slot" {
       self.replace_slot(&mut elem_vars, &mut elem_setup, &var, state, &mut slots_defined, None)?;
     }
 
-    if self.is_root && !state.parsing_special_root {
+    if (self.is_root || state.is_component_child) && !state.parsing_special_root {
+      state.is_component_child = false;
       if let Some(cond) = &self.conditional {
         state.parsing_special_root = true;
         state.imports.insert("conditionalRender");
