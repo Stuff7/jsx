@@ -23,6 +23,28 @@ pub(super) fn is_reactive_kind(kind: &str) -> bool {
   )
 }
 
+pub(super) fn is_void_element(tag: &str) -> bool {
+  matches!(
+    tag,
+    "area"
+      | "base"
+      | "br"
+      | "col"
+      | "embed"
+      | "hr"
+      | "img"
+      | "input"
+      | "keygen"
+      | "link"
+      | "menuitem"
+      | "meta"
+      | "param"
+      | "source"
+      | "track"
+      | "wbr"
+  )
+}
+
 pub(super) fn is_static_kind(kind: &str) -> bool {
   matches!(
     kind,
@@ -65,6 +87,12 @@ impl GlobalState {
     let mut setup = String::with_capacity(self.imports.len() * 128);
     for import in &self.imports {
       writeln!(setup, "import {{ {import} as {VAR_PREF}{import} }} from \"{}\";", self.import_path)?;
+      if *import == "createMutationObserver" {
+        writeln!(
+          setup,
+          "window.{VAR_PREF}mutObserver = window.{VAR_PREF}mutObserver || {VAR_PREF}createMutationObserver();"
+        )?;
+      }
     }
     writeln!(setup)?;
     self.imports.clear();
@@ -78,7 +106,7 @@ impl GlobalState {
 
     for event in &self.events {
       let var = generate_event_var(event);
-      writeln!(setup, "window.{var} = {VAR_PREF}createGlobalEvent(\"{event}\");")?;
+      writeln!(setup, "window.{var} = window.{var} || {VAR_PREF}createGlobalEvent(\"{event}\");")?;
     }
 
     Ok(setup)

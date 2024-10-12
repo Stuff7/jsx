@@ -68,7 +68,7 @@ impl<'a> JsxTemplate<'a> {
       write!(f, " style=\"{}\"", styles.join(""))?;
     }
 
-    if self.is_self_closing && self.tag != "slot" {
+    if self.is_self_closing {
       write!(f, "/>")?;
       return Ok(f);
     }
@@ -351,6 +351,17 @@ impl<'a> JsxTemplate<'a> {
       if prop.key.contains(':') {
         if let Some(event_name) = prop.key.strip_prefix("on:") {
           state.imports.insert("addLocalEvent");
+
+          if event_name == "mount" || event_name == "unmount" {
+            state.imports.insert("createMutationObserver");
+            state.imports.insert("observeTree");
+            writeln!(
+              elem_setup,
+              "{VAR_PREF}observeTree({VAR_PREF}mutObserver, {var}, {});",
+              event_name == "mount"
+            )?;
+          }
+
           writeln!(elem_setup, "{VAR_PREF}addLocalEvent({var}, \"{event_name}\", {value});")?;
         }
         else if let Some(event_name) = prop.key.strip_prefix("g:on") {

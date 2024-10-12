@@ -8,7 +8,7 @@ use crate::error::ParserError;
 use std::fmt::{Debug, Write};
 use tree_sitter::{Language, Node, Parser, Query, QueryCapture, QueryCursor, QueryMatches, Tree};
 pub use utils::GlobalState;
-use utils::{is_jsx_element, is_reactive_kind};
+use utils::{is_jsx_element, is_reactive_kind, is_void_element};
 
 pub const VAR_PREF: &str = "_jsx$";
 const Q_JSX_TEMPLATE: &str = include_str!("../../queries/jsx_template.scm");
@@ -107,6 +107,9 @@ impl<'a> JsxTemplate<'a> {
       match cap.index {
         x if x == CaptureIdx::Tag as u32 => {
           ret.tag = cap.node.utf8_text(source)?;
+          if ret.is_self_closing {
+            ret.is_self_closing = is_void_element(ret.tag);
+          }
         }
         x if x == CaptureIdx::Key as u32 => {
           ret.props.push(Prop {
