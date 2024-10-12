@@ -184,7 +184,7 @@ impl<'a> JsxTemplate<'a> {
       write!(ret.create_fn, "[")?;
       let mut idx = 0;
       while let Some(c) = self.children.get(idx) {
-        state.is_template_child = true;
+        state.is_template_child = is_jsx_element(c.kind);
         let Some(value) = self.child_as_value(&mut idx, c, templates, state)?
         else {
           continue;

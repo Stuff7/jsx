@@ -53,7 +53,7 @@ impl<'a> JsxTemplate<'a> {
           .into(),
         );
       }
-      else {
+      else if prop.key != "slot" {
         write!(f, " {}", prop.key)?;
         if let Some(v) = prop.value {
           write!(f, "=\"{v}\"")?;
@@ -83,7 +83,7 @@ impl<'a> JsxTemplate<'a> {
           continue;
         };
 
-        if elem.is_component() || elem.conditional.is_some() || elem.transition.is_some() {
+        if elem.is_component() || elem.conditional.is_some() || elem.transition.is_some() || elem.tag == "template" {
           write!(f, "<!>")?;
         }
         else {
@@ -182,7 +182,7 @@ impl<'a> JsxTemplate<'a> {
     let mut f = format!("{}(", self.tag);
 
     if self.props.is_empty() {
-      write!(f, "null")?;
+      write!(f, "{{}}")?;
     }
     else {
       write!(f, "{{")?;
@@ -198,19 +198,19 @@ impl<'a> JsxTemplate<'a> {
           )?;
         }
         else if is_reactive_kind(prop.kind) {
-          write!(
-            f,
-            "get {}() {{ return {} }}, ",
-            prop.key,
-            replace_jsx(
-              prop.node,
-              templates,
-              prop
-                .value
-                .ok_or_else(|| ParserError::msg("Reactive props must have a value", prop.node))?,
-              state
-            )?
+          let v = replace_jsx(
+            prop.node,
+            templates,
+            prop
+              .value
+              .ok_or_else(|| ParserError::msg("Reactive props must have a value", prop.node))?,
+            state,
           )?;
+
+          write!(f, "get {}() {{ return {v} }}, ", prop.key)?;
+          if prop.key.starts_with('$') {
+            write!(f, "set {}({VAR_PREF}v) {{ {v} = {VAR_PREF}v }}, ", prop.key)?;
+          }
         }
         else if let Some(value) = prop.value {
           write!(f, "{}: {}, ", prop.key, replace_jsx(prop.node, templates, value, state)?)?;
@@ -220,6 +220,9 @@ impl<'a> JsxTemplate<'a> {
         }
       }
       write!(f, "}}")?;
+    }
+    if !self.children.is_empty() {
+      write!(f, ", window.$$slots")?;
     }
     write!(f, ")")?;
 
@@ -459,6 +462,11 @@ impl<'a> JsxTemplate<'a> {
               &parts.create_fn[..parts.create_fn.len() - 2],
               wrap_reactive_value(cond.kind, cond.value.unwrap_or("true"))
             )?;
+          }
+          else if elem.tag == "template" {
+            state.imports.insert("insertChild");
+            let parts = elem.parts(templates, state)?;
+            writeln!(elem_setup, "{VAR_PREF}insertChild({var}, {});", parts.create_fn,)?;
           }
           else {
             let (vars, setup) = elem.generate_fn(var_idx, templates, state)?;

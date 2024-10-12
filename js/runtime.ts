@@ -117,7 +117,7 @@ export function insertChild(
   child: Node | (() => { toString(): string }) | number | string | unknown[],
 ) {
   if (anchor instanceof HTMLSlotElement && !child) {
-    anchor.replaceWith(...anchor.children);
+    anchor.replaceWith(...anchor.childNodes);
     return anchor.children;
   }
   else if (typeof child === "string" || typeof child === "number") {
