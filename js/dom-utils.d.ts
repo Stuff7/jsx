@@ -45,10 +45,18 @@ export type StripPrefix<T, K, Prefix extends string> = RemovePrefix<K, Prefix> e
 
 export type StyleProps = {
   [K in `style:${keyof PropertiesHyphen}`]?: Union<StripPrefix<PropertiesHyphen, K, "style:">> | string | null;
-} & { [K in `var:${string}`]?: string } & { [K in `class:${string}`]?: BoolAttr };
+} & {
+  [K in `var:${string}`]?: string;
+} & {
+  [K in `class:${string}`]?: BoolAttr;
+} & {
+  $transition?: BoolAttr;
+} & {
+  [K in `$transition:${string}`]?: BoolAttr;
+};
 
 export type Binders<T> = T & (
   keyof T extends string ? {
-    [K in `bind:${keyof T}`]?: RefUnion<StripPrefix<T, K, "bind:">> | Union<StripPrefix<T, K, "bind:">>;
+    [K in `$${keyof T}`]?: Union<StripPrefix<T, K, "$">>;
   } & StyleProps : never
 );

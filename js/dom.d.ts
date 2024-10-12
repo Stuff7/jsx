@@ -1124,7 +1124,7 @@ interface SVGAttributes<T> extends AriaAttributes, DOMAttributes<T> {
 }
 
 export interface HTMLAttributes<T> extends AriaAttributes, Partial<DOMAttributes<T>> {
-  $ref?: ((ref: T) => void) | T | null,
+  $ref?: T | null,
   // Standard HTML Attributes
   accesskey?: string | undefined;
   autofocus?: boolean | undefined;
