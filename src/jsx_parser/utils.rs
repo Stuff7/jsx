@@ -65,6 +65,7 @@ pub(super) fn wrap_reactive_value<'a>(kind: &str, value: &'a str) -> Cow<'a, str
 pub struct GlobalState {
   pub(super) import_path: Cow<'static, str>,
   pub(super) events: HashSet<Box<str>>,
+  pub(super) slots_defined: bool,
   pub(super) imports: HashSet<&'static str>,
   pub(super) templates: HashSet<usize>,
   pub(super) is_component_child: bool,
@@ -77,7 +78,7 @@ impl GlobalState {
     Self {
       import_path: match import_path {
         Some(p) => Cow::Owned(p),
-        None => Cow::Borrowed("jsx/runtime"),
+        None => Cow::Borrowed("jsx"),
       },
       ..Default::default()
     }
@@ -108,6 +109,7 @@ impl GlobalState {
       let var = generate_event_var(event);
       writeln!(setup, "window.{var} = window.{var} || {VAR_PREF}createGlobalEvent(\"{event}\");")?;
     }
+    self.events.clear();
 
     Ok(setup)
   }

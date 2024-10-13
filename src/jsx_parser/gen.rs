@@ -204,7 +204,7 @@ impl<'a> JsxTemplate<'a> {
               .ok_or_else(|| ParserError::msg("\"string_fragment\" prop kind must have a value", prop.node))?
           )?;
         }
-        else if is_reactive_kind(prop.kind) {
+        else if !(prop.key.starts_with("on:") || prop.key.starts_with("g:on")) && is_reactive_kind(prop.kind) {
           let v = replace_jsx(
             prop.node,
             templates,
@@ -241,7 +241,6 @@ impl<'a> JsxTemplate<'a> {
     elem_setup: &mut String,
     var: &str,
     state: &mut GlobalState,
-    slots_defined: &mut bool,
     node: Option<&Node>,
   ) -> Result<(), ParserError> {
     let name = self
@@ -263,9 +262,9 @@ impl<'a> JsxTemplate<'a> {
       .unwrap_or("default");
 
     state.imports.insert("insertChild");
-    if !*slots_defined {
-      writeln!(elem_vars, "const $$slots = window.$$slots;")?;
-      *slots_defined = true;
+    if !state.slots_defined {
+      writeln!(elem_vars, "const $$slots = window.$$slots; // {}", state.slots_defined)?;
+      state.slots_defined = true;
     }
     writeln!(elem_setup, "{VAR_PREF}insertChild({var}, $$slots[\"{name}\"]);")?;
 
@@ -290,13 +289,11 @@ impl<'a> JsxTemplate<'a> {
 
     let mut elem_setup = String::new();
 
-    let mut slots_defined = false;
     if self.tag == "slot" {
-      self.replace_slot(&mut elem_vars, &mut elem_setup, &var, state, &mut slots_defined, None)?;
+      self.replace_slot(&mut elem_vars, &mut elem_setup, &var, state, None)?;
     }
 
     if (self.is_root || state.is_component_child) && !state.parsing_special_root {
-      state.is_component_child = false;
       if let Some(cond) = &self.conditional {
         state.parsing_special_root = true;
         state.imports.insert("conditionalRender");
@@ -413,6 +410,9 @@ impl<'a> JsxTemplate<'a> {
       else if prop.key == "$ref" {
         writeln!(elem_setup, "{value} = {var};")?;
       }
+      else if prop.key == "$refFn" {
+        writeln!(elem_setup, "{value}({var});")?;
+      }
       else if let Some(key) = prop.key.strip_prefix('$') {
         state.imports.insert("trackAttribute");
         writeln!(
@@ -458,7 +458,7 @@ impl<'a> JsxTemplate<'a> {
             writeln!(elem_setup, "{slots};\n{VAR_PREF}insertChild({var}, {call});",)?;
           }
           else if elem.tag == "slot" {
-            elem.replace_slot(&mut elem_vars, &mut elem_setup, &var, state, &mut slots_defined, Some(&child.node))?;
+            elem.replace_slot(&mut elem_vars, &mut elem_setup, &var, state, Some(&child.node))?;
           }
           else if let Some(cond) = &elem.conditional {
             state.imports.insert("conditionalRender");

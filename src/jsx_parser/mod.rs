@@ -178,6 +178,7 @@ impl<'a> JsxTemplate<'a> {
   }
 
   fn write_fn(&self, ret: &mut TemplateParts, var_idx: &mut usize, templates: &[JsxTemplate], state: &mut GlobalState) -> Result<(), ParserError> {
+    state.slots_defined = false;
     let (elem_vars, elem_hooks) = self.generate_fn(var_idx, templates, state)?;
     write!(ret.create_fn, "(() => {{\n{elem_vars}\n{elem_hooks}\nreturn {VAR_PREF}el0;\n}})()")?;
 

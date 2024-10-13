@@ -1,4 +1,4 @@
-import { isBoolAttribute, watch } from "~/signals";
+import { isBoolAttribute, watch, watchFn } from "~/signals";
 import { EventName } from "./dom-utils";
 
 export * from "~/signals";
@@ -28,6 +28,7 @@ export function createGlobalEvent(evName: EventName) {
   (evName === "resize" ? window : document).addEventListener(evName, (e) => {
     for (let i = listeners.length - 1; i >= 0; i--) {
       const l = listeners[i];
+      if (!l.target.isConnected) { continue }
       l.fn(e);
       if (l.once) {
         listeners[i] = listeners[listeners.length - 1];
@@ -86,9 +87,11 @@ export function addGlobalEvent(
   value: EventHandler | [EventHandler, AddEventListenerOptions],
 ) {
   if (value instanceof Array) {
-    listeners.push({ fn: value[0], once: value[1].once, target });
+    if (value[0]) {
+      listeners.push({ fn: value[0], once: value[1].once, target });
+    }
   }
-  else {
+  else if (value) {
     listeners.push({ fn: value, target });
   }
 }
@@ -113,7 +116,7 @@ export function conditionalRender(
 ) {
   let node: Element;
 
-  watch(() => {
+  watchFn(condition, () => {
     if (condition()) {
       anchor.replaceWith(node || (node = create()));
     }
@@ -126,11 +129,29 @@ export function conditionalRender(
 }
 
 export function setAttribute(node: Element, attr: string, value: unknown) {
-  node.setAttribute(attr, value as string);
+  if (value == null || value === false) {
+    node.removeAttribute(attr);
+  }
+  else {
+    node.setAttribute(attr, value);
+  }
 }
 
 export function trackAttribute(node: Element, attr: string, value: () => unknown) {
-  watch(() => node.setAttribute(attr, value() as string));
+  watch(() => {
+    setAttribute(node, attr, value());
+  });
+}
+
+export function trackClass(target: Element, className: string, value: () => boolean) {
+  watch(() => {
+    if (!value()) {
+      target.classList.remove(className);
+    }
+    else {
+      target.classList.add(className);
+    }
+  });
 }
 
 type ToString = { toString(): string };
@@ -212,7 +233,7 @@ export function createTransition(
 
   let t: Element;
   const target = () => (t || (t = create()));
-  watch(async () => {
+  watchFn(cond, async () => {
     if (target().classList.length) {
       if (!cond() && (
         target().classList.contains(enterFrom()) ||
