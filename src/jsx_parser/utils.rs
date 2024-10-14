@@ -65,7 +65,6 @@ pub(super) fn wrap_reactive_value<'a>(kind: &str, value: &'a str) -> Cow<'a, str
 pub struct GlobalState {
   pub(super) import_path: Cow<'static, str>,
   pub(super) events: HashSet<Box<str>>,
-  pub(super) slots_defined: bool,
   pub(super) imports: HashSet<&'static str>,
   pub(super) templates: HashSet<usize>,
   pub(super) is_component_child: bool,
