@@ -1,4 +1,5 @@
 import { watch } from "~/signals";
+import { iterChildNodesDeep, iterChildrenDeep } from "~/utils";
 
 type PortalProps = {
   to?: Element | string,
@@ -20,9 +21,18 @@ export default function Portal(props: PortalProps, slots: JSX.Slots) {
     return props.$ref;
   };
 
+  const anchor = document.createComment("");
+
+  queueMicrotask(() => {
+    anchor.addEventListener("destroy", () => {
+      slots.default.forEach(s => iterChildNodesDeep(s, n => n.remove()));
+      anchor.remove();
+    });
+  });
+
   watch(() => {
     parent().append(...slots.default);
   });
 
-  return [] as unknown as JSX.Element;
+  return anchor as unknown as JSX.Element;
 }

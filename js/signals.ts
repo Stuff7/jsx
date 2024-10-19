@@ -1,6 +1,6 @@
 const context = [] as Running<never>[];
 
-type Running<T> = {
+export type Running<T> = {
   execute(value: T): void;
   dependencies: Set<Listeners<T>>;
 };
@@ -41,6 +41,8 @@ export function watch<T>(fn: Running<T>["execute"]) {
   };
 
   execute(undefined as T);
+
+  return running;
 }
 
 /**
@@ -69,6 +71,8 @@ export function watchOnly<T>(deps: ({ listeners: Listeners<unknown> })[], fn: Ru
   };
 
   execute(undefined as T);
+
+  return running;
 }
 
 /**
@@ -100,6 +104,8 @@ export function watchFn<T>(deps: () => unknown, fn: Running<T>["execute"]) {
   };
 
   execute(undefined as T);
+
+  return running;
 }
 
 export function ref<T>(value: T = undefined as T): Ref<T> {
@@ -177,7 +183,7 @@ function subscribe<T>(running: Running<T>, subscriptions: Listeners<T>) {
   running.dependencies.add(subscriptions);
 }
 
-function cleanup<T>(running: Running<T>) {
+export function cleanup<T>(running: Running<T>) {
   for (const dep of running.dependencies) {
     dep.delete(running);
   }

@@ -1,5 +1,6 @@
-import { isBoolAttribute, watch, watchFn } from "~/signals";
+import { watch, watchFn } from "~/signals";
 import { EventName } from "./dom-utils";
+import { swapRemove, iterChildrenDeep } from "./utils";
 
 export * from "~/signals";
 
@@ -16,14 +17,14 @@ export function template(html: string) {
 
 type EventHandler = (e: Event) => void;
 
-type GlobalEventListeners = {
+type GlobalEvent = {
   fn: EventHandler,
   target: Element,
   once?: boolean,
 };
 
 export function createGlobalEvent(evName: EventName) {
-  const listeners = [] as GlobalEventListeners[];
+  const listeners = [] as GlobalEvent[];
 
   (evName === "resize" ? window : document).addEventListener(evName, (e) => {
     for (let i = listeners.length - 1; i >= 0; i--) {
@@ -31,8 +32,7 @@ export function createGlobalEvent(evName: EventName) {
       if (!l.target.isConnected) { continue }
       l.fn(e);
       if (l.once) {
-        listeners[i] = listeners[listeners.length - 1];
-        listeners.length--;
+        swapRemove(listeners, i);
       }
     }
   });
@@ -45,6 +45,7 @@ const UnmountEvent = new CustomEvent("unmount");
 
 export function observeTree(observer: MutationObserver, target: Element, isMount: boolean) {
   queueMicrotask(() => {
+    if (!target.parentNode) { return }
     observer.observe(target.parentNode, { childList: true, subtree: true });
     if (isMount) {
       target.dispatchEvent(MountEvent);
@@ -71,19 +72,9 @@ export function createMutationObserver() {
   });
 }
 
-function iterChildrenDeep(node: Node, fn: (node: EventTarget) => void) {
-  if (node.nodeType === node.ELEMENT_NODE) {
-    for (const c of (node as HTMLElement).getElementsByTagName("*")) {
-      fn(c);
-    }
-  }
-
-  fn(node);
-}
-
 export function addGlobalEvent(
-  listeners: GlobalEventListeners[],
-  target: GlobalEventListeners["target"],
+  listeners: GlobalEvent[],
+  target: GlobalEvent["target"],
   value: EventHandler | [EventHandler, AddEventListenerOptions],
 ) {
   if (value instanceof Array) {
@@ -133,7 +124,7 @@ export function setAttribute(node: Element, attr: string, value: unknown) {
     node.removeAttribute(attr);
   }
   else {
-    node.setAttribute(attr, value);
+    node.setAttribute(attr, value as string);
   }
 }
 
