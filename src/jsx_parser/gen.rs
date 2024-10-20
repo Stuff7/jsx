@@ -164,7 +164,7 @@ impl<'a> JsxTemplate<'a> {
             slot
               .value
               .ok_or_else(|| ParserError::msg("\"slot\" attribute must have a value", child.node))?,
-            value
+            &value[..value.len() - 2]
           )?;
         }
         else if is_reactive_kind(child.kind) {
@@ -177,7 +177,7 @@ impl<'a> JsxTemplate<'a> {
         }
       }
       if let Some(slot) = default_slot {
-        write!(s, "default: [{}]", slot.join(","))?;
+        write!(s, "default: () => [{}]", slot.join(","))?;
       }
       write!(s, "}}")?;
     }
@@ -265,7 +265,7 @@ impl<'a> JsxTemplate<'a> {
       .unwrap_or("default");
 
     state.imports.insert("insertChild");
-    writeln!(elem_setup, "{VAR_PREF}insertChild({var}, arguments.callee.$$slots[\"{name}\"]);")?;
+    writeln!(elem_setup, "{VAR_PREF}insertChild({var}, arguments[1]?.[\"{name}\"]?.());")?;
 
     Ok(())
   }

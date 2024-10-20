@@ -4,7 +4,7 @@ declare namespace JSX {
   type IntrinsicElements = import("./dom.d.ts").HTMLElementAttributeMap;
 
   type Tag = keyof HTMLElementTagNameMap;
-  type Slots = Record<string, JSX.Element> & { default: JSX.Element[] };
+  type Slots = Record<string, () => JSX.Element> & { default: () => JSX.Element[] };
 
   type Component = (props: Record<string, unknown> | null, slots: Slots) => Node;
 }

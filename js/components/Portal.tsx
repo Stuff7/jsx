@@ -23,15 +23,16 @@ export default function Portal(props: PortalProps, slots: JSX.Slots) {
 
   const anchor = document.createComment("");
 
+  const children = slots.default?.();
   queueMicrotask(() => {
     anchor.addEventListener("destroy", () => {
-      slots.default.forEach(s => iterChildNodesDeep(s, n => n.remove()));
+      children.forEach(s => iterChildNodesDeep(s, n => n.remove()));
       anchor.remove();
     });
   });
 
   watch(() => {
-    parent().append(...slots.default);
+    parent().append(...children);
   });
 
   return anchor as unknown as JSX.Element;

@@ -224,7 +224,7 @@ export function insertChild(
       if (typeof c === "string") {
         textNode.textContent = c;
       }
-      else {
+      else if (c != null) {
         textNode.textContent = c.toString();
       }
     });
@@ -258,11 +258,27 @@ export function createTransition(
   let t: Element;
   const create = () => {
     t = createNode();
+
     t.addEventListener("destroy", () => cleanup(running));
+    t.addEventListener("transitionend", () => {
+      removeClasses();
+
+      if (!cond()) {
+        t.replaceWith(anchor);
+      }
+    });
+
     return t;
   };
   const target = () => (t || (t = create()));
+  let firstRun = true;
   const running = watchFn(cond, async () => {
+    if (firstRun && !cond()) {
+      firstRun = false;
+      return;
+    }
+    firstRun = false;
+
     if (target().classList.length) {
       if (!cond() && (
         target().classList.contains(enterFrom()) ||
@@ -315,14 +331,6 @@ export function createTransition(
     target().classList.remove(leaveFrom());
     target().classList.remove(leaveTo());
   }
-
-  target().addEventListener("transitionend", () => {
-    removeClasses();
-
-    if (!cond()) {
-      target().replaceWith(anchor);
-    }
-  });
 
   return cond() ? target() : anchor;
 }
