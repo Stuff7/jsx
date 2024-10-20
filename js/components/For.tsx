@@ -1,12 +1,11 @@
+import { destroyNode } from "~/jsx";
 import { isReactiveObject, reactive, ref, watch } from "~/signals";
-import { createElementPosition, InsertNodeFn, iterChildNodesDeep } from "~/utils";
+import { createElementPosition, InsertNodeFn } from "~/utils";
 
 type ForProps<T> = {
   each: T[],
   do: (item: () => T, i: number) => JSX.Element,
 };
-
-const DestroyEvent = new CustomEvent("destroy");
 
 /**
  * A component that renders a list of JSX elements from a reactive dynamically-sized array.
@@ -88,8 +87,7 @@ export default function For<T>(props: ForProps<T>): JSX.Element {
     if (props.each.length < length) {
       if (refs[length - 1] !== undefined) { return }
       for (let i = length - 1; i >= props.each.length; i--) {
-        iterChildNodesDeep(list[i], t => t.dispatchEvent(DestroyEvent));
-        list[i].remove();
+        destroyNode(list[i]);
       }
       length = refs.length = list.length = props.each.length;
     }

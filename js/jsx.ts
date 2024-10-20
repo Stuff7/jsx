@@ -1,6 +1,6 @@
-import { watch, watchFn } from "~/signals";
+import { cleanup, watch, watchFn } from "~/signals";
 import { EventName } from "./dom-utils";
-import { swapRemove, iterChildrenDeep } from "./utils";
+import { swapRemove, iterChildrenDeep, iterChildNodesDeep } from "./utils";
 
 export * from "~/signals";
 
@@ -42,6 +42,12 @@ export function createGlobalEvent(evName: EventName) {
 
 const MountEvent = new CustomEvent("mount");
 const UnmountEvent = new CustomEvent("unmount");
+const DestroyEvent = new CustomEvent("destroy");
+
+export function destroyNode(node: Element) {
+  iterChildNodesDeep(node, t => t.dispatchEvent(DestroyEvent));
+  node.remove();
+}
 
 export function observeTree(observer: MutationObserver, target: Element, isMount: boolean) {
   queueMicrotask(() => {
@@ -77,13 +83,25 @@ export function addGlobalEvent(
   target: GlobalEvent["target"],
   value: EventHandler | [EventHandler, AddEventListenerOptions],
 ) {
+  let added = false;
   if (value instanceof Array) {
     if (value[0]) {
       listeners.push({ fn: value[0], once: value[1].once, target });
+      added = true;
     }
   }
   else if (value) {
     listeners.push({ fn: value, target });
+    added = true;
+  }
+
+  if (added) {
+    target.addEventListener("destroy", () => {
+      const i = listeners.findIndex(l => l.target === target);
+      if (i !== -1) {
+        swapRemove(listeners, i);
+      }
+    });
   }
 }
 
@@ -102,12 +120,19 @@ export function addLocalEvent(
 
 export function conditionalRender(
   anchor: Comment,
-  create: () => Element,
+  createNode: () => Element,
   condition: () => boolean,
 ) {
   let node: Element;
 
-  watchFn(condition, () => {
+  anchor.addEventListener("destroy", () => cleanup(running));
+  const create = () => {
+    node = createNode();
+    node.addEventListener("destroy", () => cleanup(running));
+    return node;
+  };
+
+  const running = watchFn(condition, () => {
     if (condition()) {
       anchor.replaceWith(node || (node = create()));
     }
@@ -129,13 +154,15 @@ export function setAttribute(node: Element, attr: string, value: unknown) {
 }
 
 export function trackAttribute(node: Element, attr: string, value: () => unknown) {
-  watch(() => {
+  const running = watch(() => {
     setAttribute(node, attr, value());
   });
+
+  node.addEventListener("destroy", () => cleanup(running));
 }
 
 export function trackClass(target: Element, className: string, value: () => boolean) {
-  watch(() => {
+  const running = watch(() => {
     if (!value()) {
       target.classList.remove(className);
     }
@@ -143,12 +170,15 @@ export function trackClass(target: Element, className: string, value: () => bool
       target.classList.add(className);
     }
   });
+
+  target.addEventListener("destroy", () => cleanup(running));
 }
 
 type ToString = { toString(): string };
 export function trackCssProperty(target: HTMLElement, rule: string, value: (() => ToString) | ToString) {
   if (typeof value === "function") {
-    watch(() => target.style.setProperty(rule, value()));
+    const running = watch(() => target.style.setProperty(rule, value()));
+    target.addEventListener("destroy", () => cleanup(running));
   }
   else {
     target.style.setProperty(rule, value.toString());
@@ -189,7 +219,7 @@ export function insertChild(
   else {
     const textNode = document.createTextNode("");
     anchor.replaceWith(textNode);
-    watch(() => {
+    const running = watch(() => {
       const c = child();
       if (typeof c === "string") {
         textNode.textContent = c;
@@ -198,16 +228,19 @@ export function insertChild(
         textNode.textContent = c.toString();
       }
     });
+    textNode.addEventListener("destroy", () => cleanup(running));
     return textNode;
   }
 }
 
 export function createTransition(
   anchor: Comment,
-  create: () => Element,
+  createNode: () => Element,
   cond: () => boolean,
   name = "jsx",
 ) {
+  anchor.addEventListener("destroy", () => cleanup(running));
+
   const enterActive = () => `${name}-enter-active`;
   const enterFrom = () => `${name}-enter-from`;
   const enterTo = () => `${name}-enter-to`;
@@ -223,8 +256,13 @@ export function createTransition(
   }
 
   let t: Element;
+  const create = () => {
+    t = createNode();
+    t.addEventListener("destroy", () => cleanup(running));
+    return t;
+  };
   const target = () => (t || (t = create()));
-  watchFn(cond, async () => {
+  const running = watchFn(cond, async () => {
     if (target().classList.length) {
       if (!cond() && (
         target().classList.contains(enterFrom()) ||
