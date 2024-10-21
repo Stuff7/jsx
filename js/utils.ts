@@ -80,6 +80,7 @@ export function iterChildNodesDeep(node: Node, fn: (node: ChildNode) => void) {
   for (const n of node.childNodes) {
     iterChildNodesDeep(n, fn);
   }
+  (node as ChildNode).remove();
 }
 
 export type ElementPosition = {

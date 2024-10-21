@@ -40,13 +40,8 @@ export function createGlobalEvent(evName: EventName) {
   return listeners;
 }
 
-const MountEvent = new CustomEvent("mount");
-const UnmountEvent = new CustomEvent("unmount");
-const DestroyEvent = new CustomEvent("destroy");
-
 export function destroyNode(node: Element) {
-  iterChildNodesDeep(node, t => t.dispatchEvent(DestroyEvent));
-  node.remove();
+  iterChildNodesDeep(node, t => t.dispatchEvent(new CustomEvent("destroy")));
 }
 
 export function observeTree(observer: MutationObserver, target: Element, isMount: boolean) {
@@ -54,7 +49,7 @@ export function observeTree(observer: MutationObserver, target: Element, isMount
     if (!target.parentNode) { return }
     observer.observe(target.parentNode, { childList: true, subtree: true });
     if (isMount) {
-      target.dispatchEvent(MountEvent);
+      target.dispatchEvent(new CustomEvent("mount"));
     }
   });
 }
@@ -66,12 +61,12 @@ export function createMutationObserver() {
 
       for (const node of mutation.addedNodes) {
         queueMicrotask(() => {
-          iterChildrenDeep(node, node => node.dispatchEvent(MountEvent));
+          iterChildrenDeep(node, node => node.dispatchEvent(new CustomEvent("mount")));
         });
       }
       for (const node of mutation.removedNodes) {
         queueMicrotask(() => {
-          iterChildrenDeep(node, node => node.dispatchEvent(UnmountEvent));
+          iterChildrenDeep(node, node => node.dispatchEvent(new CustomEvent("unmount")));
         });
       }
     });
@@ -125,10 +120,20 @@ export function conditionalRender(
 ) {
   let node: Element;
 
-  anchor.addEventListener("destroy", () => cleanup(running));
+  anchor.addEventListener("destroy", () => {
+    if (node) {
+      node.dispatchEvent(new CustomEvent("destroy"));
+    }
+    else {
+      cleanup(running);
+    }
+  });
   const create = () => {
     node = createNode();
-    node.addEventListener("destroy", () => cleanup(running));
+    node.addEventListener("destroy", () => {
+      cleanup(running);
+      anchor.remove();
+    });
     return node;
   };
 
@@ -251,7 +256,15 @@ export function createTransition(
   cond: () => boolean,
   name = "jsx",
 ) {
-  anchor.addEventListener("destroy", () => cleanup(running));
+  let t: Element;
+  anchor.addEventListener("destroy", () => {
+    if (t) {
+      t.dispatchEvent(new CustomEvent("destroy"));
+    }
+    else {
+      cleanup(running);
+    }
+  });
 
   const enterActive = () => `${name}-enter-active`;
   const enterFrom = () => `${name}-enter-from`;
@@ -267,11 +280,13 @@ export function createTransition(
     });
   }
 
-  let t: Element;
   const create = () => {
     t = createNode();
 
-    t.addEventListener("destroy", () => cleanup(running));
+    t.addEventListener("destroy", () => {
+      cleanup(running);
+      anchor.remove();
+    });
     t.addEventListener("transitionend", () => {
       removeClasses();
 

@@ -1,5 +1,5 @@
+import { destroyNode } from "~/jsx";
 import { watch } from "~/signals";
-import { iterChildNodesDeep } from "~/utils";
 
 type PortalProps = {
   to?: Element | string,
@@ -26,7 +26,7 @@ export default function Portal(props: PortalProps, slots: JSX.Slots) {
   const children = slots.default?.();
   queueMicrotask(() => {
     anchor.addEventListener("destroy", () => {
-      children.forEach(s => iterChildNodesDeep(s, n => n.remove()));
+      children.forEach(destroyNode);
       anchor.remove();
     });
   });
