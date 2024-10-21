@@ -1,5 +1,5 @@
 import { watch } from "~/signals";
-import { iterChildNodesDeep, iterChildrenDeep } from "~/utils";
+import { iterChildNodesDeep } from "~/utils";
 
 type PortalProps = {
   to?: Element | string,

@@ -1,4 +1,4 @@
-import { cleanup, watch, watchFn } from "~/signals";
+import { cleanup, Running, watch, watchFn } from "~/signals";
 import { EventName } from "./dom-utils";
 import { swapRemove, iterChildrenDeep, iterChildNodesDeep } from "./utils";
 
@@ -154,9 +154,18 @@ export function setAttribute(node: Element, attr: string, value: unknown) {
 }
 
 export function trackAttribute(node: Element, attr: string, value: () => unknown) {
-  const running = watch(() => {
-    setAttribute(node, attr, value());
-  });
+  let running: Running<unknown>;
+
+  if (attr === "checked") {
+    running = watch(() => {
+      node[attr] = value();
+    });
+  }
+  else {
+    running = watch(() => {
+      setAttribute(node, attr, value());
+    });
+  }
 
   node.addEventListener("destroy", () => cleanup(running));
 }
@@ -226,6 +235,9 @@ export function insertChild(
       }
       else if (c != null) {
         textNode.textContent = c.toString();
+      }
+      else if (c == null) {
+        textNode.textContent = "";
       }
     });
     textNode.addEventListener("destroy", () => cleanup(running));

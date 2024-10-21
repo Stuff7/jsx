@@ -113,6 +113,9 @@ export default function For<T>(props: ForProps<T>): JSX.Element {
 
       length = refs.length = list.length = props.each.length;
     }
+    else if (props.each.length < length) {
+      removeNode();
+    }
   });
 
   return anchor as unknown as JSX.Element;

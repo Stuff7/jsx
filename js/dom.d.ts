@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { BoolAttr, ReactiveAttr } from "./signals";
-import { Binders, CSSProperties, SpecialProps, EventHandlers } from "./dom-utils";
+import { Option, Binders, CSSProperties, SpecialProps, EventHandlers } from "./dom-utils";
 
 type HTMLAttributeAnchorTarget =
   | "_self"
@@ -21,165 +21,165 @@ type HTMLAttributeReferrerPolicy =
   | "unsafe-url";
 
 interface AnchorHTMLAttributes<T> extends HTMLAttributes<T> {
-  download?: any;
-  href?: string | undefined;
-  hreflang?: string | undefined;
-  media?: string | undefined;
-  ping?: string | undefined;
-  target?: HTMLAttributeAnchorTarget | undefined;
-  type?: string | undefined;
-  referrerpolicy?: HTMLAttributeReferrerPolicy | undefined;
+  download?: Option<any>;
+  href?: Option<string>;
+  hreflang?: Option<string>;
+  media?: Option<string>;
+  ping?: Option<string>;
+  target?: Option<HTMLAttributeAnchorTarget>;
+  type?: Option<string>;
+  referrerpolicy?: Option<HTMLAttributeReferrerPolicy>;
 }
 
 interface AudioHTMLAttributes<T> extends MediaHTMLAttributes<T> { }
 
 interface AreaHTMLAttributes<T> extends HTMLAttributes<T> {
-  alt?: string | undefined;
-  coords?: string | undefined;
-  download?: any;
-  href?: string | undefined;
-  hreflang?: string | undefined;
-  media?: string | undefined;
-  referrerpolicy?: HTMLAttributeReferrerPolicy | undefined;
-  shape?: string | undefined;
-  target?: string | undefined;
+  alt?: Option<string>;
+  coords?: Option<string>;
+  download?: Option<any>;
+  href?: Option<string>;
+  hreflang?: Option<string>;
+  media?: Option<string>;
+  referrerpolicy?: Option<HTMLAttributeReferrerPolicy>;
+  shape?: Option<string>;
+  target?: Option<string>;
 }
 
 interface BaseHTMLAttributes<T> extends HTMLAttributes<T> {
-  href?: string | undefined;
-  target?: string | undefined;
+  href?: Option<string>;
+  target?: Option<string>;
 }
 
 interface BlockquoteHTMLAttributes<T> extends HTMLAttributes<T> {
-  cite?: string | undefined;
+  cite?: Option<string>;
 }
 
 interface ButtonHTMLAttributes<T> extends HTMLAttributes<T> {
-  disabled?: boolean | undefined;
-  form?: string | undefined;
+  disabled?: Option<boolean>;
+  form?: Option<string>;
   formaction?:
   | string
   | NonNullable<unknown>[
   keyof NonNullable<unknown>
   ]
   | undefined;
-  formenctype?: string | undefined;
-  formmethod?: string | undefined;
-  formnovalidate?: boolean | undefined;
-  formtarget?: string | undefined;
-  name?: string | undefined;
-  type?: "submit" | "reset" | "button" | undefined;
-  value?: string | readonly string[] | number | undefined;
+  formenctype?: Option<string>;
+  formmethod?: Option<string>;
+  formnovalidate?: Option<boolean>;
+  formtarget?: Option<string>;
+  name?: Option<string>;
+  type?: Option<"submit" | "reset" | "button">;
+  value?: Option<string | readonly string[] | number>;
 }
 
 interface CanvasHTMLAttributes<T> extends HTMLAttributes<T> {
-  height?: number | string | undefined;
-  width?: number | string | undefined;
+  height?: Option<number | string>;
+  width?: Option<number | string>;
 }
 
 interface ColHTMLAttributes<T> extends HTMLAttributes<T> {
-  span?: number | undefined;
-  width?: number | string | undefined;
+  span?: Option<number>;
+  width?: Option<number | string>;
 }
 
 interface ColgroupHTMLAttributes<T> extends HTMLAttributes<T> {
-  span?: number | undefined;
+  span?: Option<number>;
 }
 
 interface DataHTMLAttributes<T> extends HTMLAttributes<T> {
-  value?: string | readonly string[] | number | undefined;
+  value?: Option<string | readonly string[] | number>;
 }
 
 interface DetailsHTMLAttributes<T> extends HTMLAttributes<T> {
-  open?: boolean | undefined;
-  name?: string | undefined;
+  open?: Option<boolean>;
+  name?: Option<string>;
 }
 
 interface DelHTMLAttributes<T> extends HTMLAttributes<T> {
-  cite?: string | undefined;
-  datetime?: string | undefined;
+  cite?: Option<string>;
+  datetime?: Option<string>;
 }
 
 interface DialogHTMLAttributes<T> extends HTMLAttributes<T> {
-  open?: boolean | undefined;
+  open?: Option<boolean>;
 }
 
 interface EmbedHTMLAttributes<T> extends HTMLAttributes<T> {
-  height?: number | string | undefined;
-  src?: string | undefined;
-  type?: string | undefined;
-  width?: number | string | undefined;
+  height?: Option<number | string>;
+  src?: Option<string>;
+  type?: Option<string>;
+  width?: Option<number | string>;
 }
 
 interface FieldsetHTMLAttributes<T> extends HTMLAttributes<T> {
-  disabled?: boolean | undefined;
-  form?: string | undefined;
-  name?: string | undefined;
+  disabled?: Option<boolean>;
+  form?: Option<string>;
+  name?: Option<string>;
 }
 
 interface FormHTMLAttributes<T> extends HTMLAttributes<T> {
-  "accept-charset"?: string | undefined;
+  "accept-charset"?: Option<string>;
   action?:
   | string
   | undefined
   | NonNullable<unknown>[
   keyof NonNullable<unknown>
   ];
-  autocomplete?: string | undefined;
-  enctype?: string | undefined;
-  method?: string | undefined;
-  name?: string | undefined;
-  novalidate?: boolean | undefined;
-  target?: string | undefined;
+  autocomplete?: Option<string>;
+  enctype?: Option<string>;
+  method?: Option<string>;
+  name?: Option<string>;
+  novalidate?: Option<boolean>;
+  target?: Option<string>;
 }
 
 interface HtmlHTMLAttributes<T> extends HTMLAttributes<T> {
-  manifest?: string | undefined;
+  manifest?: Option<string>;
 }
 
 interface IframeHTMLAttributes<T> extends HTMLAttributes<T> {
-  allow?: string | undefined;
-  allowfullscreen?: boolean | undefined;
-  allowtransparency?: boolean | undefined;
+  allow?: Option<string>;
+  allowfullscreen?: Option<boolean>;
+  allowtransparency?: Option<boolean>;
   /** @deprecated */
-  frameborder?: number | string | undefined;
-  height?: number | string | undefined;
-  loading?: "eager" | "lazy" | undefined;
+  frameborder?: Option<number | string>;
+  height?: Option<number | string>;
+  loading?: Option<"eager" | "lazy">;
   /** @deprecated */
-  marginheight?: number | undefined;
+  marginheight?: Option<number>;
   /** @deprecated */
-  marginwidth?: number | undefined;
-  name?: string | undefined;
-  referrerpolicy?: HTMLAttributeReferrerPolicy | undefined;
-  sandbox?: string | undefined;
+  marginwidth?: Option<number>;
+  name?: Option<string>;
+  referrerpolicy?: Option<HTMLAttributeReferrerPolicy>;
+  sandbox?: Option<string>;
   /** @deprecated */
-  scrolling?: string | undefined;
-  seamless?: boolean | undefined;
-  src?: string | undefined;
-  srcdoc?: string | undefined;
-  width?: number | string | undefined;
+  scrolling?: Option<string>;
+  seamless?: Option<boolean>;
+  src?: Option<string>;
+  srcdoc?: Option<string>;
+  width?: Option<number | string>;
 }
 
 type CrossOrigin = "anonymous" | "use-credentials" | "" | undefined;
 
 interface ImgHTMLAttributes<T> extends HTMLAttributes<T> {
-  alt?: string | undefined;
-  crossorigin?: CrossOrigin;
-  decoding?: "async" | "auto" | "sync" | undefined;
-  fetchpriority?: "high" | "low" | "auto";
-  height?: number | string | undefined;
-  loading?: "eager" | "lazy" | undefined;
-  referrerpolicy?: HTMLAttributeReferrerPolicy | undefined;
-  sizes?: string | undefined;
-  src?: string | undefined;
-  srcset?: string | undefined;
-  usemap?: string | undefined;
-  width?: number | string | undefined;
+  alt?: Option<string>;
+  crossorigin?: Option<CrossOrigin>;
+  decoding?: Option<"async" | "auto" | "sync">;
+  fetchpriority?: Option<"high" | "low" | "auto">;
+  height?: Option<number | string>;
+  loading?: Option<"eager" | "lazy">;
+  referrerpolicy?: Option<HTMLAttributeReferrerPolicy>;
+  sizes?: Option<string>;
+  src?: Option<string>;
+  srcset?: Option<string>;
+  usemap?: Option<string>;
+  width?: Option<number | string>;
 }
 
 interface InsHTMLAttributes<T> extends HTMLAttributes<T> {
-  cite?: string | undefined;
-  datetime?: string | undefined;
+  cite?: Option<string>;
+  datetime?: Option<string>;
 }
 
 type HTMLInputTypeAttribute =
@@ -270,503 +270,501 @@ type AutoFill =
 type HTMLInputAutoCompleteAttribute = AutoFill | (string & NonNullable<unknown>);
 
 interface InputHTMLAttributes<T> extends HTMLAttributes<T> {
-  accept?: string | undefined;
-  alt?: string | undefined;
-  autocomplete?: HTMLInputAutoCompleteAttribute | undefined;
-  capture?: boolean | "user" | "environment" | undefined; // https://www.w3.org/TR/html-media-capture/#the-capture-attribute
-  checked?: boolean | undefined;
-  disabled?: boolean | undefined;
-  enterkeyhint?: "enter" | "done" | "go" | "next" | "previous" | "search" | "send" | undefined;
-  form?: string | undefined;
+  accept?: Option<string>;
+  alt?: Option<string>;
+  autocomplete?: Option<HTMLInputAutoCompleteAttribute>;
+  capture?: Option<boolean | "user" | "environment">; // https://www.w3.org/TR/html-media-capture/#the-capture-attribute
+  checked?: Option<boolean>;
+  disabled?: Option<boolean>;
+  enterkeyhint?: Option<"enter" | "done" | "go" | "next" | "previous" | "search" | "send">;
+  form?: Option<string>;
   formaction?:
   | string
   | NonNullable<unknown>
   | undefined;
-  formenctype?: string | undefined;
-  formmethod?: string | undefined;
-  formnovalidate?: boolean | undefined;
-  formtarget?: string | undefined;
-  height?: number | string | undefined;
-  list?: string | undefined;
-  max?: number | string | undefined;
-  maxlength?: number | undefined;
-  min?: number | string | undefined;
-  minlength?: number | undefined;
-  multiple?: boolean | undefined;
-  name?: string | undefined;
-  pattern?: string | undefined;
-  placeholder?: string | undefined;
-  readonly?: boolean | undefined;
-  required?: boolean | undefined;
-  size?: number | undefined;
-  src?: string | undefined;
-  step?: number | string | undefined;
-  type?: HTMLInputTypeAttribute | undefined;
-  value?: string | readonly string[] | number | undefined;
-  width?: number | string | undefined;
+  formenctype?: Option<string>;
+  formmethod?: Option<string>;
+  formnovalidate?: Option<boolean>;
+  formtarget?: Option<string>;
+  height?: Option<number | string>;
+  list?: Option<string>;
+  max?: Option<number | string>;
+  maxlength?: Option<number>;
+  min?: Option<number | string>;
+  minlength?: Option<number>;
+  multiple?: Option<boolean>;
+  name?: Option<string>;
+  pattern?: Option<string>;
+  placeholder?: Option<string>;
+  readonly?: Option<boolean>;
+  required?: Option<boolean>;
+  size?: Option<number>;
+  src?: Option<string>;
+  step?: Option<number | string>;
+  type?: Option<HTMLInputTypeAttribute>;
+  value?: Option<string | readonly string[] | number>;
+  width?: Option<number | string>;
 }
 
 interface KeygenHTMLAttributes<T> extends HTMLAttributes<T> {
-  challenge?: string | undefined;
-  disabled?: boolean | undefined;
-  form?: string | undefined;
-  keytype?: string | undefined;
-  keyparams?: string | undefined;
-  name?: string | undefined;
+  challenge?: Option<string>;
+  disabled?: Option<boolean>;
+  form?: Option<string>;
+  keytype?: Option<string>;
+  keyparams?: Option<string>;
+  name?: Option<string>;
 }
 
 interface LabelHTMLAttributes<T> extends HTMLAttributes<T> {
-  form?: string | undefined;
-  for?: string | undefined;
-  htmlFor?: string | undefined;
+  form?: Option<string>;
+  for?: Option<string>;
+  htmlFor?: Option<string>;
 }
 
 interface LiHTMLAttributes<T> extends HTMLAttributes<T> {
-  value?: string | readonly string[] | number | undefined;
+  value?: Option<string | readonly string[] | number>;
 }
 
 interface LinkHTMLAttributes<T> extends HTMLAttributes<T> {
-  as?: string | undefined;
-  crossorigin?: CrossOrigin;
-  fetchpriority?: "high" | "low" | "auto";
-  href?: string | undefined;
-  hreflang?: string | undefined;
-  integrity?: string | undefined;
-  media?: string | undefined;
-  imagesrcset?: string | undefined;
-  imagesizes?: string | undefined;
-  referrerpolicy?: HTMLAttributeReferrerPolicy | undefined;
-  sizes?: string | undefined;
-  type?: string | undefined;
-  charset?: string | undefined;
+  as?: Option<string>;
+  crossorigin?: Option<CrossOrigin>;
+  fetchpriority?: Option<"high" | "low" | "auto">;
+  href?: Option<string>;
+  hreflang?: Option<string>;
+  integrity?: Option<string>;
+  media?: Option<string>;
+  imagesrcset?: Option<string>;
+  imagesizes?: Option<string>;
+  referrerpolicy?: Option<HTMLAttributeReferrerPolicy>;
+  sizes?: Option<string>;
+  type?: Option<string>;
+  charset?: Option<string>;
 }
 
 interface MapHTMLAttributes<T> extends HTMLAttributes<T> {
-  name?: string | undefined;
+  name?: Option<string>;
 }
 
 interface MenuHTMLAttributes<T> extends HTMLAttributes<T> {
-  type?: string | undefined;
+  type?: Option<string>;
 }
 
 interface MediaHTMLAttributes<T> extends HTMLAttributes<T> {
-  autoplay?: boolean | undefined;
-  controls?: boolean | undefined;
-  controlslist?: string | undefined;
-  crossorigin?: CrossOrigin;
-  loop?: boolean | undefined;
-  mediagroup?: string | undefined;
-  muted?: boolean | undefined;
-  playsinline?: boolean | undefined;
-  preload?: string | undefined;
-  src?: string | undefined;
+  autoplay?: Option<boolean>;
+  controls?: Option<boolean>;
+  controlslist?: Option<string>;
+  crossorigin?: Option<CrossOrigin>;
+  loop?: Option<boolean>;
+  mediagroup?: Option<string>;
+  muted?: Option<boolean>;
+  playsinline?: Option<boolean>;
+  preload?: Option<string>;
+  src?: Option<string>;
 }
 
 interface MetaHTMLAttributes<T> extends HTMLAttributes<T> {
-  charset?: string | undefined;
-  content?: string | undefined;
-  "http-equiv"?: string | undefined;
-  media?: string | undefined;
-  name?: string | undefined;
+  charset?: Option<string>;
+  content?: Option<string>;
+  "http-equiv"?: Option<string>;
+  media?: Option<string>;
+  name?: Option<string>;
 }
 
 interface MeterHTMLAttributes<T> extends HTMLAttributes<T> {
-  form?: string | undefined;
-  high?: number | undefined;
-  low?: number | undefined;
-  max?: number | string | undefined;
-  min?: number | string | undefined;
-  optimum?: number | undefined;
-  value?: string | readonly string[] | number | undefined;
+  form?: Option<string>;
+  high?: Option<number>;
+  low?: Option<number>;
+  max?: Option<number | string>;
+  min?: Option<number | string>;
+  optimum?: Option<number>;
+  value?: Option<string | readonly string[] | number>;
 }
 
 interface QuoteHTMLAttributes<T> extends HTMLAttributes<T> {
-  cite?: string | undefined;
+  cite?: Option<string>;
 }
 
 interface ObjectHTMLAttributes<T> extends HTMLAttributes<T> {
-  classid?: string | undefined;
-  data?: string | undefined;
-  form?: string | undefined;
-  height?: number | string | undefined;
-  name?: string | undefined;
-  type?: string | undefined;
-  usemap?: string | undefined;
-  width?: number | string | undefined;
-  wmode?: string | undefined;
+  classid?: Option<string>;
+  data?: Option<string>;
+  form?: Option<string>;
+  height?: Option<number | string>;
+  name?: Option<string>;
+  type?: Option<string>;
+  usemap?: Option<string>;
+  width?: Option<number | string>;
+  wmode?: Option<string>;
 }
 
 interface OlHTMLAttributes<T> extends HTMLAttributes<T> {
-  reversed?: boolean | undefined;
-  start?: number | undefined;
-  type?: "1" | "a" | "A" | "i" | "I" | undefined;
+  reversed?: Option<boolean>;
+  start?: Option<number>;
+  type?: Option<"1" | "a" | "A" | "i" | "I">;
 }
 
 interface OptgroupHTMLAttributes<T> extends HTMLAttributes<T> {
-  disabled?: boolean | undefined;
-  label?: string | undefined;
+  disabled?: Option<boolean>;
+  label?: Option<string>;
 }
 
 interface OptionHTMLAttributes<T> extends HTMLAttributes<T> {
-  disabled?: boolean | undefined;
-  label?: string | undefined;
-  selected?: boolean | undefined;
-  value?: string | readonly string[] | number | undefined;
+  disabled?: Option<boolean>;
+  label?: Option<string>;
+  selected?: Option<boolean>;
+  value?: Option<string | readonly string[] | number>;
 }
 
 interface OutputHTMLAttributes<T> extends HTMLAttributes<T> {
-  form?: string | undefined;
-  for?: string | undefined;
-  htmlFor?: string | undefined;
-  name?: string | undefined;
+  form?: Option<string>;
+  for?: Option<string>;
+  htmlFor?: Option<string>;
+  name?: Option<string>;
 }
 
 interface ParamHTMLAttributes<T> extends HTMLAttributes<T> {
-  name?: string | undefined;
-  value?: string | readonly string[] | number | undefined;
+  name?: Option<string>;
+  value?: Option<string | readonly string[] | number>;
 }
 
 interface ProgressHTMLAttributes<T> extends HTMLAttributes<T> {
-  max?: number | string | undefined;
-  value?: string | readonly string[] | number | undefined;
+  max?: Option<number | string>;
+  value?: Option<string | readonly string[] | number>;
 }
 
 interface SlotHTMLAttributes<T> extends HTMLAttributes<T> {
-  name?: string | undefined;
+  name?: Option<string>;
 }
 
 interface ScriptHTMLAttributes<T> extends HTMLAttributes<T> {
-  async?: boolean | undefined;
+  async?: Option<boolean>;
   /** @deprecated */
-  charset?: string | undefined;
+  charset?: Option<string>;
   crossorigin?: CrossOrigin;
-  defer?: boolean | undefined;
-  integrity?: string | undefined;
-  nomodule?: boolean | undefined;
-  referrerpolicy?: HTMLAttributeReferrerPolicy | undefined;
-  src?: string | undefined;
-  type?: string | undefined;
+  defer?: Option<boolean>;
+  integrity?: Option<string>;
+  nomodule?: Option<boolean>;
+  referrerpolicy?: Option<HTMLAttributeReferrerPolicy>;
+  src?: Option<string>;
+  type?: Option<string>;
 }
 
 interface SelectHTMLAttributes<T> extends HTMLAttributes<T> {
-  autocomplete?: string | undefined;
-  disabled?: boolean | undefined;
-  form?: string | undefined;
-  multiple?: boolean | undefined;
-  name?: string | undefined;
-  required?: boolean | undefined;
-  size?: number | undefined;
-  value?: string | readonly string[] | number | undefined;
+  autocomplete?: Option<string>;
+  disabled?: Option<boolean>;
+  form?: Option<string>;
+  multiple?: Option<boolean>;
+  name?: Option<string>;
+  required?: Option<boolean>;
+  size?: Option<number>;
+  value?: Option<string | readonly string[] | number>;
 }
 
 interface SourceHTMLAttributes<T> extends HTMLAttributes<T> {
-  height?: number | string | undefined;
-  media?: string | undefined;
-  sizes?: string | undefined;
-  src?: string | undefined;
-  srcset?: string | undefined;
-  type?: string | undefined;
-  width?: number | string | undefined;
+  height?: Option<number | string>;
+  media?: Option<string>;
+  sizes?: Option<string>;
+  src?: Option<string>;
+  srcset?: Option<string>;
+  type?: Option<string>;
+  width?: Option<number | string>;
 }
 
 interface StyleHTMLAttributes<T> extends HTMLAttributes<T> {
-  media?: string | undefined;
-  scoped?: boolean | undefined;
-  type?: string | undefined;
+  media?: Option<string>;
+  scoped?: Option<boolean>;
+  type?: Option<string>;
 }
 
 interface TableHTMLAttributes<T> extends HTMLAttributes<T> {
-  align?: "left" | "center" | "right" | undefined;
-  bgcolor?: string | undefined;
-  border?: number | undefined;
-  cellpadding?: number | string | undefined;
-  cellspacing?: number | string | undefined;
-  frame?: boolean | undefined;
-  rules?: "none" | "groups" | "rows" | "columns" | "all" | undefined;
-  summary?: string | undefined;
-  width?: number | string | undefined;
+  align?: Option<"left" | "center" | "right">;
+  bgcolor?: Option<string>;
+  border?: Option<number>;
+  cellpadding?: Option<number | string>;
+  cellspacing?: Option<number | string>;
+  frame?: Option<boolean>;
+  rules?: Option<"none" | "groups" | "rows" | "columns" | "all">;
+  summary?: Option<string>;
+  width?: Option<number | string>;
 }
 
 interface TextareaHTMLAttributes<T> extends HTMLAttributes<T> {
-  autocomplete?: string | undefined;
-  cols?: number | undefined;
-  dirname?: string | undefined;
-  disabled?: boolean | undefined;
-  form?: string | undefined;
-  maxlength?: number | undefined;
-  minlength?: number | undefined;
-  name?: string | undefined;
-  placeholder?: string | undefined;
-  readonly?: boolean | undefined;
-  required?: boolean | undefined;
-  rows?: number | undefined;
-  value?: string | readonly string[] | number | undefined;
-  wrap?: string | undefined;
+  autocomplete?: Option<string>;
+  cols?: Option<number>;
+  dirname?: Option<string>;
+  disabled?: Option<boolean>;
+  form?: Option<string>;
+  maxlength?: Option<number>;
+  minlength?: Option<number>;
+  name?: Option<string>;
+  placeholder?: Option<string>;
+  readonly?: Option<boolean>;
+  required?: Option<boolean>;
+  rows?: Option<number>;
+  value?: Option<string | readonly string[] | number>;
+  wrap?: Option<string>;
 }
 
 interface TdHTMLAttributes<T> extends HTMLAttributes<T> {
-  align?: "left" | "center" | "right" | "justify" | "char" | undefined;
-  colspan?: number | undefined;
-  headers?: string | undefined;
-  rowspan?: number | undefined;
-  scope?: string | undefined;
-  abbr?: string | undefined;
-  height?: number | string | undefined;
-  width?: number | string | undefined;
-  valign?: "top" | "middle" | "bottom" | "baseline" | undefined;
+  align?: Option<"left" | "center" | "right" | "justify" | "char">;
+  colspan?: Option<number>;
+  headers?: Option<string>;
+  rowspan?: Option<number>;
+  scope?: Option<string>;
+  abbr?: Option<string>;
+  height?: Option<number | string>;
+  width?: Option<number | string>;
+  valign?: Option<"top" | "middle" | "bottom" | "baseline">;
 }
 
 interface ThHTMLAttributes<T> extends HTMLAttributes<T> {
-  align?: "left" | "center" | "right" | "justify" | "char" | undefined;
-  colspan?: number | undefined;
-  headers?: string | undefined;
-  rowspan?: number | undefined;
-  scope?: string | undefined;
-  abbr?: string | undefined;
+  align?: Option<"left" | "center" | "right" | "justify" | "char">;
+  colspan?: Option<number>;
+  headers?: Option<string>;
+  rowspan?: Option<number>;
+  scope?: Option<string>;
+  abbr?: Option<string>;
 }
 
 interface TimeHTMLAttributes<T> extends HTMLAttributes<T> {
-  datetime?: string | undefined;
+  datetime?: Option<string>;
 }
 
 interface TrackHTMLAttributes<T> extends HTMLAttributes<T> {
-  default?: boolean | undefined;
-  kind?: string | undefined;
-  label?: string | undefined;
-  src?: string | undefined;
-  srclang?: string | undefined;
+  default?: Option<boolean>;
+  kind?: Option<string>;
+  label?: Option<string>;
+  src?: Option<string>;
+  srclang?: Option<string>;
 }
 
 interface VideoHTMLAttributes<T> extends MediaHTMLAttributes<T> {
-  height?: number | string | undefined;
-  playsinline?: boolean | undefined;
-  poster?: string | undefined;
-  width?: number | string | undefined;
-  disablepictureinpicture?: boolean | undefined;
-  disableremoteplayback?: boolean | undefined;
+  height?: Option<number | string>;
+  playsinline?: Option<boolean>;
+  poster?: Option<string>;
+  width?: Option<number | string>;
+  disablepictureinpicture?: Option<boolean>;
+  disableremoteplayback?: Option<boolean>;
 }
 
 interface AriaAttributes {
   /** Identifies the currently active element when DOM focus is on a composite widget, textbox, group, or application. */
-  "aria-activedescendant"?: string | undefined;
+  "aria-activedescendant"?: Option<string>;
   /** Indicates whether assistive technologies will present all, or only parts of, the changed region based on the change notifications defined by the aria-relevant attribute. */
-  "aria-atomic"?: BoolAttr | undefined;
+  "aria-atomic"?: Option<BoolAttr>;
   /**
    * Indicates whether inputting text could trigger display of one or more predictions of the user's intended value for an input and specifies how predictions would be
    * presented if they are made.
    */
-  "aria-autocomplete"?: "none" | "inline" | "list" | "both" | undefined;
+  "aria-autocomplete"?: Option<"none" | "inline" | "list" | "both">;
   /** Indicates an element is being modified and that assistive technologies MAY want to wait until the modifications are complete before exposing them to the user. */
   /**
    * Defines a string value that labels the current element, which is intended to be converted into Braille.
    * @see aria-label.
    */
-  "aria-braillelabel"?: string | undefined;
+  "aria-braillelabel"?: Option<string>;
   /**
    * Defines a human-readable, author-localized abbreviated description for the role of an element, which is intended to be converted into Braille.
    * @see aria-roledescription.
    */
-  "aria-brailleroledescription"?: string | undefined;
-  "aria-busy"?: BoolAttr | undefined;
+  "aria-brailleroledescription"?: Option<string>;
+  "aria-busy"?: Option<BoolAttr>;
   /**
    * Indicates the current "checked" state of checkboxes, radio buttons, and other widgets.
    * @see aria-pressed @see aria-selected.
    */
-  "aria-checked"?: boolean | "false" | "mixed" | "true" | undefined;
+  "aria-checked"?: Option<boolean | "false" | "mixed" | "true">;
   /**
    * Defines the total number of columns in a table, grid, or treegrid.
    * @see aria-colindex.
    */
-  "aria-colcount"?: number | undefined;
+  "aria-colcount"?: Option<number>;
   /**
    * Defines an element's column index or position with respect to the total number of columns within a table, grid, or treegrid.
    * @see aria-colcount @see aria-colspan.
    */
-  "aria-colindex"?: number | undefined;
+  "aria-colindex"?: Option<number>;
   /**
    * Defines a human readable text alternative of aria-colindex.
    * @see aria-rowindextext.
    */
-  "aria-colindextext"?: string | undefined;
+  "aria-colindextext"?: Option<string>;
   /**
    * Defines the number of columns spanned by a cell or gridcell within a table, grid, or treegrid.
    * @see aria-colindex @see aria-rowspan.
    */
-  "aria-colspan"?: number | undefined;
+  "aria-colspan"?: Option<number>;
   /**
    * Identifies the element (or elements) whose contents or presence are controlled by the current element.
    * @see aria-owns.
    */
-  "aria-controls"?: string | undefined;
+  "aria-controls"?: Option<string>;
   /** Indicates the element that represents the current item within a container or set of related elements. */
-  "aria-current"?: boolean | "false" | "true" | "page" | "step" | "location" | "date" | "time" | undefined;
+  "aria-current"?: Option<boolean | "false" | "true" | "page" | "step" | "location" | "date" | "time">;
   /**
    * Identifies the element (or elements) that describes the object.
    * @see aria-labelledby
    */
-  "aria-describedby"?: string | undefined;
+  "aria-describedby"?: Option<string>;
   /**
    * Defines a string value that describes or annotates the current element.
    * @see related aria-describedby.
    */
-  "aria-description"?: string | undefined;
+  "aria-description"?: Option<string>;
   /**
    * Identifies the element that provides a detailed, extended description for the object.
    * @see aria-describedby.
    */
-  "aria-details"?: string | undefined;
+  "aria-details"?: Option<string>;
   /**
    * Indicates that the element is perceivable but disabled, so it is not editable or otherwise operable.
    * @see aria-hidden @see aria-readonly.
    */
-  "aria-disabled"?: BoolAttr | undefined;
+  "aria-disabled"?: Option<BoolAttr>;
   /**
    * Indicates what functions can be performed when a dragged object is released on the drop target.
    * @deprecated in ARIA 1.1
    */
-  "aria-dropeffect"?: "none" | "copy" | "execute" | "link" | "move" | "popup" | undefined;
+  "aria-dropeffect"?: Option<"none" | "copy" | "execute" | "link" | "move" | "popup">;
   /**
    * Identifies the element that provides an error message for the object.
    * @see aria-invalid @see aria-describedby.
    */
-  "aria-errormessage"?: string | undefined;
+  "aria-errormessage"?: Option<string>;
   /** Indicates whether the element, or another grouping element it controls, is currently expanded or collapsed. */
-  "aria-expanded"?: BoolAttr | undefined;
+  "aria-expanded"?: Option<BoolAttr>;
   /**
    * Identifies the next element (or elements) in an alternate reading order of content which, at the user's discretion,
    * allows assistive technology to override the general default of reading in document source order.
    */
-  "aria-flowto"?: string | undefined;
+  "aria-flowto"?: Option<string>;
   /**
    * Indicates an element's "grabbed" state in a drag-and-drop operation.
    * @deprecated in ARIA 1.1
    */
-  "aria-grabbed"?: BoolAttr | undefined;
+  "aria-grabbed"?: Option<BoolAttr>;
   /** Indicates the availability and type of interactive popup element, such as menu or dialog, that can be triggered by an element. */
-  "aria-haspopup"?: boolean | "false" | "true" | "menu" | "listbox" | "tree" | "grid" | "dialog" | undefined;
+  "aria-haspopup"?: Option<boolean | "false" | "true" | "menu" | "listbox" | "tree" | "grid" | "dialog">;
   /**
    * Indicates whether the element is exposed to an accessibility API.
    * @see aria-disabled.
    */
-  "aria-hidden"?: BoolAttr | undefined;
+  "aria-hidden"?: Option<BoolAttr>;
   /**
    * Indicates the entered value does not conform to the format expected by the application.
    * @see aria-errormessage.
    */
-  "aria-invalid"?: boolean | "false" | "true" | "grammar" | "spelling" | undefined;
+  "aria-invalid"?: Option<boolean | "false" | "true" | "grammar" | "spelling">;
   /** Indicates keyboard shortcuts that an author has implemented to activate or give focus to an element. */
-  "aria-keyshortcuts"?: string | undefined;
+  "aria-keyshortcuts"?: Option<string>;
   /**
    * Defines a string value that labels the current element.
    * @see aria-labelledby.
    */
-  "aria-label"?: string | undefined;
+  "aria-label"?: Option<string>;
   /**
    * Identifies the element (or elements) that labels the current element.
    * @see aria-describedby.
    */
-  "aria-labelledby"?: string | undefined;
+  "aria-labelledby"?: Option<string>;
   /** Defines the hierarchical level of an element within a structure. */
-  "aria-level"?: number | undefined;
+  "aria-level"?: Option<number>;
   /** Indicates that an element will be updated, and describes the types of updates the user agents, assistive technologies, and user can expect from the live region. */
-  "aria-live"?: "off" | "assertive" | "polite" | undefined;
+  "aria-live"?: Option<"off" | "assertive" | "polite">;
   /** Indicates whether an element is modal when displayed. */
-  "aria-modal"?: BoolAttr | undefined;
+  "aria-modal"?: Option<BoolAttr>;
   /** Indicates whether a text box accepts multiple lines of input or only a single line. */
-  "aria-multiline"?: BoolAttr | undefined;
+  "aria-multiline"?: Option<BoolAttr>;
   /** Indicates that the user may select more than one item from the current selectable descendants. */
-  "aria-multiselectable"?: BoolAttr | undefined;
+  "aria-multiselectable"?: Option<BoolAttr>;
   /** Indicates whether the element's orientation is horizontal, vertical, or unknown/ambiguous. */
-  "aria-orientation"?: "horizontal" | "vertical" | undefined;
+  "aria-orientation"?: Option<"horizontal" | "vertical">;
   /**
    * Identifies an element (or elements) in order to define a visual, functional, or contextual parent/child relationship
    * between DOM elements where the DOM hierarchy cannot be used to represent the relationship.
    * @see aria-controls.
    */
-  "aria-owns"?: string | undefined;
+  "aria-owns"?: Option<string>;
   /**
    * Defines a short hint (a word or short phrase) intended to aid the user with data entry when the control has no value.
    * A hint could be a sample value or a brief description of the expected format.
    */
-  "aria-placeholder"?: string | undefined;
+  "aria-placeholder"?: Option<string>;
   /**
    * Defines an element's number or position in the current set of listitems or treeitems. Not required if all elements in the set are present in the DOM.
    * @see aria-setsize.
    */
-  "aria-posinset"?: number | undefined;
+  "aria-posinset"?: Option<number>;
   /**
    * Indicates the current "pressed" state of toggle buttons.
    * @see aria-checked @see aria-selected.
    */
-  "aria-pressed"?: boolean | "false" | "mixed" | "true" | undefined;
+  "aria-pressed"?: Option<boolean | "false" | "mixed" | "true">;
   /**
    * Indicates that the element is not editable, but is otherwise operable.
    * @see aria-disabled.
    */
-  "aria-readonly"?: BoolAttr | undefined;
+  "aria-readonly"?: Option<BoolAttr>;
   /**
    * Indicates what notifications the user agent will trigger when the accessibility tree within a live region is modified.
    * @see aria-atomic.
    */
-  "aria-relevant"?:
-  | "additions"
-  | "additions removals"
-  | "additions text"
-  | "all"
-  | "removals"
-  | "removals additions"
-  | "removals text"
-  | "text"
-  | "text additions"
-  | "text removals"
-  | undefined;
+  "aria-relevant"?: Option<"additions"
+    | "additions removals"
+    | "additions text"
+    | "all"
+    | "removals"
+    | "removals additions"
+    | "removals text"
+    | "text"
+    | "text additions"
+    | "text removals">;
   /** Indicates that user input is required on the element before a form may be submitted. */
-  "aria-required"?: BoolAttr | undefined;
+  "aria-required"?: Option<BoolAttr>;
   /** Defines a human-readable, author-localized description for the role of an element. */
-  "aria-roledescription"?: string | undefined;
+  "aria-roledescription"?: Option<string>;
   /**
    * Defines the total number of rows in a table, grid, or treegrid.
    * @see aria-rowindex.
    */
-  "aria-rowcount"?: number | undefined;
+  "aria-rowcount"?: Option<number>;
   /**
    * Defines an element's row index or position with respect to the total number of rows within a table, grid, or treegrid.
    * @see aria-rowcount @see aria-rowspan.
    */
-  "aria-rowindex"?: number | undefined;
+  "aria-rowindex"?: Option<number>;
   /**
    * Defines a human readable text alternative of aria-rowindex.
    * @see aria-colindextext.
    */
-  "aria-rowindextext"?: string | undefined;
+  "aria-rowindextext"?: Option<string>;
   /**
    * Defines the number of rows spanned by a cell or gridcell within a table, grid, or treegrid.
    * @see aria-rowindex @see aria-colspan.
    */
-  "aria-rowspan"?: number | undefined;
+  "aria-rowspan"?: Option<number>;
   /**
    * Indicates the current "selected" state of various widgets.
    * @see aria-checked @see aria-pressed.
    */
-  "aria-selected"?: BoolAttr | undefined;
+  "aria-selected"?: Option<BoolAttr>;
   /**
    * Defines the number of items in the current set of listitems or treeitems. Not required if all elements in the set are present in the DOM.
    * @see aria-posinset.
    */
-  "aria-setsize"?: number | undefined;
+  "aria-setsize"?: Option<number>;
   /** Indicates if items in a table or grid are sorted in ascending or descending order. */
-  "aria-sort"?: "none" | "ascending" | "descending" | "other" | undefined;
+  "aria-sort"?: Option<"none" | "ascending" | "descending" | "other">;
   /** Defines the maximum allowed value for a range widget. */
-  "aria-valuemax"?: number | undefined;
+  "aria-valuemax"?: Option<number>;
   /** Defines the minimum allowed value for a range widget. */
-  "aria-valuemin"?: number | undefined;
+  "aria-valuemin"?: Option<number>;
   /**
    * Defines the current value for a range widget.
    * @see aria-valuetext.
    */
-  "aria-valuenow"?: number | undefined;
+  "aria-valuenow"?: Option<number>;
   /** Defines the human readable text alternative of aria-valuenow for a range widget. */
-  "aria-valuetext"?: string | undefined;
+  "aria-valuetext"?: Option<string>;
 }
 
 // All the WAI-ARIA 1.1 role attribute values from https://www.w3.org/TR/wai-aria-1.1/#role_definitions
@@ -843,352 +841,350 @@ type AriaRole =
   | (string & NonNullable<unknown>);
 
 type DOMAttributes<T> = SpecialProps & EventHandlers<T> & {
-  children?: Node | Node[] | undefined;
-  innerHTML?: string;
+  children?: Option<Node | Node[]>;
+  innerHTML?: Option<string>;
 };
 
 interface SVGAttributes<T> extends AriaAttributes, DOMAttributes<T> {
   // Attributes which are also defined in HTMLAttributes
-  class?: ReactiveAttr;
-  color?: string | undefined;
-  height?: number | string | undefined;
-  id?: string | undefined;
-  lang?: string | undefined;
-  max?: number | string | undefined;
-  media?: string | undefined;
-  method?: string | undefined;
-  min?: number | string | undefined;
-  name?: string | undefined;
-  style?: CSSProperties | undefined;
-  target?: string | undefined;
-  type?: string | undefined;
-  width?: number | string | undefined;
+  class?: Option<ReactiveAttr>;
+  color?: Option<string>;
+  height?: Option<number | string>;
+  id?: Option<string>;
+  lang?: Option<string>;
+  max?: Option<number | string>;
+  media?: Option<string>;
+  method?: Option<string>;
+  min?: Option<number | string>;
+  name?: Option<string>;
+  style?: Option<CSSProperties>;
+  target?: Option<string>;
+  type?: Option<string>;
+  width?: Option<number | string>;
 
   // Other HTML properties supported by SVG elements in browsers
-  role?: AriaRole | undefined;
-  tabindex?: number | undefined;
-  crossorigin?: CrossOrigin;
+  role?: Option<AriaRole>;
+  tabindex?: Option<number>;
+  crossorigin?: Option<CrossOrigin>;
 
   // SVG Specific attributes
-  "accent-height"?: number | string | undefined;
-  accumulate?: "none" | "sum" | undefined;
-  additive?: "replace" | "sum" | undefined;
-  "alignment-baseline"?:
-  | "auto"
-  | "baseline"
-  | "before-edge"
-  | "text-before-edge"
-  | "middle"
-  | "central"
-  | "after-edge"
-  | "text-after-edge"
-  | "ideographic"
-  | "alphabetic"
-  | "hanging"
-  | "mathematical"
-  | "inherit"
-  | undefined;
-  alphabetic?: number | string | undefined;
-  amplitude?: number | string | undefined;
-  "arabic-form"?: "initial" | "medial" | "terminal" | "isolated" | undefined;
-  ascent?: number | string | undefined;
-  attributeName?: string | undefined;
-  attributeType?: string | undefined;
-  azimuth?: number | string | undefined;
-  baseFrequency?: number | string | undefined;
-  "baseline-shift"?: number | string | undefined;
-  baseProfile?: number | string | undefined;
-  bbox?: number | string | undefined;
-  begin?: number | string | undefined;
-  bias?: number | string | undefined;
-  by?: number | string | undefined;
-  calcMode?: number | string | undefined;
-  "cap-height"?: number | string | undefined;
-  clip?: number | string | undefined;
-  "clip-path"?: string | undefined;
-  "clip-rule"?: number | string | undefined;
-  "color-interpolation"?: number | string | undefined;
-  "color-interpolation-filters"?: "auto" | "sRGB" | "linearRGB" | "inherit" | undefined;
-  "color-profile"?: number | string | undefined;
-  "color-rendering"?: number | string | undefined;
-  "content-script-type"?: number | string | undefined;
-  "content-style-type"?: number | string | undefined;
-  cursor?: number | string | undefined;
-  cx?: number | string | undefined;
-  cy?: number | string | undefined;
-  d?: string | undefined;
-  decelerate?: number | string | undefined;
-  descent?: number | string | undefined;
-  diffuseConstant?: number | string | undefined;
-  direction?: number | string | undefined;
-  display?: number | string | undefined;
-  divisor?: number | string | undefined;
-  "dominant-baseline"?: number | string | undefined;
-  dur?: number | string | undefined;
-  dx?: number | string | undefined;
-  dy?: number | string | undefined;
-  edgeMode?: number | string | undefined;
-  elevation?: number | string | undefined;
-  "enable-background"?: number | string | undefined;
-  end?: number | string | undefined;
-  exponent?: number | string | undefined;
-  "external-resources-required"?: BoolAttr | undefined;
-  fill?: string | undefined;
-  "fill-opacity"?: number | string | undefined;
-  "fill-rule"?: "nonzero" | "evenodd" | "inherit" | undefined;
-  filter?: string | undefined;
-  "flood-color"?: number | string | undefined;
-  "flood-opacity"?: number | string | undefined;
-  focusable?: BoolAttr | "auto" | undefined;
-  "font-family"?: string | undefined;
-  "font-size"?: number | string | undefined;
-  "font-size-adjust"?: number | string | undefined;
-  "font-stretch"?: number | string | undefined;
-  "font-style"?: number | string | undefined;
-  "font-variant"?: number | string | undefined;
-  "font-weight"?: number | string | undefined;
-  format?: number | string | undefined;
-  fr?: number | string | undefined;
-  from?: number | string | undefined;
-  fx?: number | string | undefined;
-  fy?: number | string | undefined;
-  g1?: number | string | undefined;
-  g2?: number | string | undefined;
-  "glyph-name"?: number | string | undefined;
-  "glyph-orientation-horizontal"?: number | string | undefined;
-  "glyph-orientation-vertical"?: number | string | undefined;
-  "glyph-ref"?: number | string | undefined;
-  gradientTransform?: string | undefined;
-  gradientUnits?: string | undefined;
-  hanging?: number | string | undefined;
-  "horiz-adv-x"?: number | string | undefined;
-  "horiz-origin-x"?: number | string | undefined;
-  href?: string | undefined;
-  ideographic?: number | string | undefined;
-  "image-rendering"?: number | string | undefined;
-  in2?: number | string | undefined;
-  in?: string | undefined;
-  intercept?: number | string | undefined;
-  k1?: number | string | undefined;
-  k2?: number | string | undefined;
-  k3?: number | string | undefined;
-  k4?: number | string | undefined;
-  k?: number | string | undefined;
-  kernelMatrix?: number | string | undefined;
-  kernelUnitLength?: number | string | undefined;
-  kerning?: number | string | undefined;
-  keyPoints?: number | string | undefined;
-  keySplines?: number | string | undefined;
-  keyTimes?: number | string | undefined;
-  lengthAdjust?: number | string | undefined;
-  "letter-spacing"?: number | string | undefined;
-  "lighting-color"?: number | string | undefined;
-  limitingConeAngle?: number | string | undefined;
-  local?: number | string | undefined;
-  "marker-end"?: string | undefined;
-  markerHeight?: number | string | undefined;
-  "marker-mid"?: string | undefined;
-  "marker-start"?: string | undefined;
-  markerUnits?: number | string | undefined;
-  markerWidth?: number | string | undefined;
-  mask?: string | undefined;
-  maskContentUnits?: number | string | undefined;
-  maskUnits?: number | string | undefined;
-  mathematical?: number | string | undefined;
-  mode?: number | string | undefined;
-  numOctaves?: number | string | undefined;
-  offset?: number | string | undefined;
-  opacity?: number | string | undefined;
-  operator?: number | string | undefined;
-  order?: number | string | undefined;
-  orient?: number | string | undefined;
-  orientation?: number | string | undefined;
-  origin?: number | string | undefined;
-  overflow?: number | string | undefined;
-  "overline-position"?: number | string | undefined;
-  "overline-thickness"?: number | string | undefined;
-  "paint-order"?: number | string | undefined;
-  "panose-1"?: number | string | undefined;
-  path?: string | undefined;
-  pathLength?: number | string | undefined;
-  patternContentUnits?: string | undefined;
-  patternTransform?: number | string | undefined;
-  patternUnits?: string | undefined;
-  "pointer-events"?: number | string | undefined;
-  points?: string | undefined;
-  pointsAtX?: number | string | undefined;
-  pointsAtY?: number | string | undefined;
-  pointsAtZ?: number | string | undefined;
-  preserveAlpha?: BoolAttr | undefined;
-  preserveAspectRatio?: string | undefined;
-  primitiveUnits?: number | string | undefined;
-  r?: number | string | undefined;
-  radius?: number | string | undefined;
-  refX?: number | string | undefined;
-  refY?: number | string | undefined;
-  renderingIntent?: number | string | undefined;
-  repeatCount?: number | string | undefined;
-  repeatDur?: number | string | undefined;
-  requiredExtensions?: number | string | undefined;
-  requiredFeatures?: number | string | undefined;
-  restart?: number | string | undefined;
-  result?: string | undefined;
-  rotate?: number | string | undefined;
-  rx?: number | string | undefined;
-  ry?: number | string | undefined;
-  scale?: number | string | undefined;
-  seed?: number | string | undefined;
-  "shape-rendering"?: number | string | undefined;
-  slope?: number | string | undefined;
-  spacing?: number | string | undefined;
-  specularConstant?: number | string | undefined;
-  specularExponent?: number | string | undefined;
-  speed?: number | string | undefined;
-  spreadMethod?: string | undefined;
-  startOffset?: number | string | undefined;
-  stdDeviation?: number | string | undefined;
-  stemh?: number | string | undefined;
-  stemv?: number | string | undefined;
-  stitchTiles?: number | string | undefined;
-  "stop-color"?: string | undefined;
-  "stop-opacity"?: number | string | undefined;
-  "strikethrough-position"?: number | string | undefined;
-  "strikethrough-thickness"?: number | string | undefined;
-  string?: number | string | undefined;
-  stroke?: string | undefined;
-  "stroke-dasharray"?: string | number | undefined;
-  "stroke-dashoffset"?: string | number | undefined;
-  "stroke-linecap"?: "butt" | "round" | "square" | "inherit" | undefined;
-  "stroke-linejoin"?: "miter" | "round" | "bevel" | "inherit" | undefined;
-  "stroke-miterlimit"?: number | string | undefined;
-  "stroke-opacity"?: number | string | undefined;
-  "stroke-width"?: number | string | undefined;
-  surfaceScale?: number | string | undefined;
-  systemLanguage?: number | string | undefined;
-  tableValues?: number | string | undefined;
-  targetX?: number | string | undefined;
-  targetY?: number | string | undefined;
-  "text-anchor"?: string | undefined;
-  "text-decoration"?: number | string | undefined;
-  "text-length"?: number | string | undefined;
-  "text-rendering"?: number | string | undefined;
-  to?: number | string | undefined;
-  transform?: string | undefined;
-  u1?: number | string | undefined;
-  u2?: number | string | undefined;
-  "underline-position"?: number | string | undefined;
-  "underline-thickness"?: number | string | undefined;
-  unicode?: number | string | undefined;
-  "unicode-bidi"?: number | string | undefined;
-  "unicode-range"?: number | string | undefined;
-  "units-per-em"?: number | string | undefined;
-  "v-alphabetic"?: number | string | undefined;
-  values?: string | undefined;
-  "vector-effect"?: number | string | undefined;
-  version?: string | undefined;
-  "vert-adv-y"?: number | string | undefined;
-  "vert-origin-x"?: number | string | undefined;
-  "vert-origin-y"?: number | string | undefined;
-  "v-hanging"?: number | string | undefined;
-  "v-ideographic"?: number | string | undefined;
-  viewBox?: string | undefined;
-  viewTarget?: number | string | undefined;
-  visibility?: number | string | undefined;
-  "v-mathematical"?: number | string | undefined;
-  widths?: number | string | undefined;
-  "word-spacing"?: number | string | undefined;
-  "writing-mode"?: number | string | undefined;
-  x1?: number | string | undefined;
-  x2?: number | string | undefined;
-  x?: number | string | undefined;
-  xChannelSelector?: string | undefined;
-  "x-height"?: number | string | undefined;
-  "xlink:actuate"?: string | undefined;
-  "xlink:arcrole"?: string | undefined;
-  "xlink:href"?: string | undefined;
-  "xlink:role"?: string | undefined;
-  "xlink:show"?: string | undefined;
-  "xlink:title"?: string | undefined;
-  "xlink:type"?: string | undefined;
-  "xml:base"?: string | undefined;
-  "xml:lang"?: string | undefined;
-  xmlns?: string | undefined;
-  "xmlns-xlink"?: string | undefined;
-  "xml-space"?: string | undefined;
-  y1?: number | string | undefined;
-  y2?: number | string | undefined;
-  y?: number | string | undefined;
-  yChannelSelector?: string | undefined;
-  z?: number | string | undefined;
-  zoomAndPan?: string | undefined;
+  "accent-height"?: Option<number | string>;
+  accumulate?: Option<"none" | "sum">;
+  additive?: Option<"replace" | "sum">;
+  "alignment-baseline"?: Option<"auto"
+    | "baseline"
+    | "before-edge"
+    | "text-before-edge"
+    | "middle"
+    | "central"
+    | "after-edge"
+    | "text-after-edge"
+    | "ideographic"
+    | "alphabetic"
+    | "hanging"
+    | "mathematical"
+    | "inherit">;
+  alphabetic?: Option<number | string>;
+  amplitude?: Option<number | string>;
+  "arabic-form"?: Option<"initial" | "medial" | "terminal" | "isolated">;
+  ascent?: Option<number | string>;
+  attributeName?: Option<string>;
+  attributeType?: Option<string>;
+  azimuth?: Option<number | string>;
+  baseFrequency?: Option<number | string>;
+  "baseline-shift"?: Option<number | string>;
+  baseProfile?: Option<number | string>;
+  bbox?: Option<number | string>;
+  begin?: Option<number | string>;
+  bias?: Option<number | string>;
+  by?: Option<number | string>;
+  calcMode?: Option<number | string>;
+  "cap-height"?: Option<number | string>;
+  clip?: Option<number | string>;
+  "clip-path"?: Option<string>;
+  "clip-rule"?: Option<number | string>;
+  "color-interpolation"?: Option<number | string>;
+  "color-interpolation-filters"?: Option<"auto" | "sRGB" | "linearRGB" | "inherit">;
+  "color-profile"?: Option<number | string>;
+  "color-rendering"?: Option<number | string>;
+  "content-script-type"?: Option<number | string>;
+  "content-style-type"?: Option<number | string>;
+  cursor?: Option<number | string>;
+  cx?: Option<number | string>;
+  cy?: Option<number | string>;
+  d?: Option<string>;
+  decelerate?: Option<number | string>;
+  descent?: Option<number | string>;
+  diffuseConstant?: Option<number | string>;
+  direction?: Option<number | string>;
+  display?: Option<number | string>;
+  divisor?: Option<number | string>;
+  "dominant-baseline"?: Option<number | string>;
+  dur?: Option<number | string>;
+  dx?: Option<number | string>;
+  dy?: Option<number | string>;
+  edgeMode?: Option<number | string>;
+  elevation?: Option<number | string>;
+  "enable-background"?: Option<number | string>;
+  end?: Option<number | string>;
+  exponent?: Option<number | string>;
+  "external-resources-required"?: Option<BoolAttr>;
+  fill?: Option<string>;
+  "fill-opacity"?: Option<number | string>;
+  "fill-rule"?: Option<"nonzero" | "evenodd" | "inherit">;
+  filter?: Option<string>;
+  "flood-color"?: Option<number | string>;
+  "flood-opacity"?: Option<number | string>;
+  focusable?: Option<BoolAttr | "auto">;
+  "font-family"?: Option<string>;
+  "font-size"?: Option<number | string>;
+  "font-size-adjust"?: Option<number | string>;
+  "font-stretch"?: Option<number | string>;
+  "font-style"?: Option<number | string>;
+  "font-variant"?: Option<number | string>;
+  "font-weight"?: Option<number | string>;
+  format?: Option<number | string>;
+  fr?: Option<number | string>;
+  from?: Option<number | string>;
+  fx?: Option<number | string>;
+  fy?: Option<number | string>;
+  g1?: Option<number | string>;
+  g2?: Option<number | string>;
+  "glyph-name"?: Option<number | string>;
+  "glyph-orientation-horizontal"?: Option<number | string>;
+  "glyph-orientation-vertical"?: Option<number | string>;
+  "glyph-ref"?: Option<number | string>;
+  gradientTransform?: Option<string>;
+  gradientUnits?: Option<string>;
+  hanging?: Option<number | string>;
+  "horiz-adv-x"?: Option<number | string>;
+  "horiz-origin-x"?: Option<number | string>;
+  href?: Option<string>;
+  ideographic?: Option<number | string>;
+  "image-rendering"?: Option<number | string>;
+  in2?: Option<number | string>;
+  in?: Option<string>;
+  intercept?: Option<number | string>;
+  k1?: Option<number | string>;
+  k2?: Option<number | string>;
+  k3?: Option<number | string>;
+  k4?: Option<number | string>;
+  k?: Option<number | string>;
+  kernelMatrix?: Option<number | string>;
+  kernelUnitLength?: Option<number | string>;
+  kerning?: Option<number | string>;
+  keyPoints?: Option<number | string>;
+  keySplines?: Option<number | string>;
+  keyTimes?: Option<number | string>;
+  lengthAdjust?: Option<number | string>;
+  "letter-spacing"?: Option<number | string>;
+  "lighting-color"?: Option<number | string>;
+  limitingConeAngle?: Option<number | string>;
+  local?: Option<number | string>;
+  "marker-end"?: Option<string>;
+  markerHeight?: Option<number | string>;
+  "marker-mid"?: Option<string>;
+  "marker-start"?: Option<string>;
+  markerUnits?: Option<number | string>;
+  markerWidth?: Option<number | string>;
+  mask?: Option<string>;
+  maskContentUnits?: Option<number | string>;
+  maskUnits?: Option<number | string>;
+  mathematical?: Option<number | string>;
+  mode?: Option<number | string>;
+  numOctaves?: Option<number | string>;
+  offset?: Option<number | string>;
+  opacity?: Option<number | string>;
+  operator?: Option<number | string>;
+  order?: Option<number | string>;
+  orient?: Option<number | string>;
+  orientation?: Option<number | string>;
+  origin?: Option<number | string>;
+  overflow?: Option<number | string>;
+  "overline-position"?: Option<number | string>;
+  "overline-thickness"?: Option<number | string>;
+  "paint-order"?: Option<number | string>;
+  "panose-1"?: Option<number | string>;
+  path?: Option<string>;
+  pathLength?: Option<number | string>;
+  patternContentUnits?: Option<string>;
+  patternTransform?: Option<number | string>;
+  patternUnits?: Option<string>;
+  "pointer-events"?: Option<number | string>;
+  points?: Option<string>;
+  pointsAtX?: Option<number | string>;
+  pointsAtY?: Option<number | string>;
+  pointsAtZ?: Option<number | string>;
+  preserveAlpha?: Option<BoolAttr>;
+  preserveAspectRatio?: Option<string>;
+  primitiveUnits?: Option<number | string>;
+  r?: Option<number | string>;
+  radius?: Option<number | string>;
+  refX?: Option<number | string>;
+  refY?: Option<number | string>;
+  renderingIntent?: Option<number | string>;
+  repeatCount?: Option<number | string>;
+  repeatDur?: Option<number | string>;
+  requiredExtensions?: Option<number | string>;
+  requiredFeatures?: Option<number | string>;
+  restart?: Option<number | string>;
+  result?: Option<string>;
+  rotate?: Option<number | string>;
+  rx?: Option<number | string>;
+  ry?: Option<number | string>;
+  scale?: Option<number | string>;
+  seed?: Option<number | string>;
+  "shape-rendering"?: Option<number | string>;
+  slope?: Option<number | string>;
+  spacing?: Option<number | string>;
+  specularConstant?: Option<number | string>;
+  specularExponent?: Option<number | string>;
+  speed?: Option<number | string>;
+  spreadMethod?: Option<string>;
+  startOffset?: Option<number | string>;
+  stdDeviation?: Option<number | string>;
+  stemh?: Option<number | string>;
+  stemv?: Option<number | string>;
+  stitchTiles?: Option<number | string>;
+  "stop-color"?: Option<string>;
+  "stop-opacity"?: Option<number | string>;
+  "strikethrough-position"?: Option<number | string>;
+  "strikethrough-thickness"?: Option<number | string>;
+  string?: Option<number | string>;
+  stroke?: Option<string>;
+  "stroke-dasharray"?: Option<string | number>;
+  "stroke-dashoffset"?: Option<string | number>;
+  "stroke-linecap"?: Option<"butt" | "round" | "square" | "inherit">;
+  "stroke-linejoin"?: Option<"miter" | "round" | "bevel" | "inherit">;
+  "stroke-miterlimit"?: Option<number | string>;
+  "stroke-opacity"?: Option<number | string>;
+  "stroke-width"?: Option<number | string>;
+  surfaceScale?: Option<number | string>;
+  systemLanguage?: Option<number | string>;
+  tableValues?: Option<number | string>;
+  targetX?: Option<number | string>;
+  targetY?: Option<number | string>;
+  "text-anchor"?: Option<string>;
+  "text-decoration"?: Option<number | string>;
+  "text-length"?: Option<number | string>;
+  "text-rendering"?: Option<number | string>;
+  to?: Option<number | string>;
+  transform?: Option<string>;
+  u1?: Option<number | string>;
+  u2?: Option<number | string>;
+  "underline-position"?: Option<number | string>;
+  "underline-thickness"?: Option<number | string>;
+  unicode?: Option<number | string>;
+  "unicode-bidi"?: Option<number | string>;
+  "unicode-range"?: Option<number | string>;
+  "units-per-em"?: Option<number | string>;
+  "v-alphabetic"?: Option<number | string>;
+  values?: Option<string>;
+  "vector-effect"?: Option<number | string>;
+  version?: Option<string>;
+  "vert-adv-y"?: Option<number | string>;
+  "vert-origin-x"?: Option<number | string>;
+  "vert-origin-y"?: Option<number | string>;
+  "v-hanging"?: Option<number | string>;
+  "v-ideographic"?: Option<number | string>;
+  viewBox?: Option<string>;
+  viewTarget?: Option<number | string>;
+  visibility?: Option<number | string>;
+  "v-mathematical"?: Option<number | string>;
+  widths?: Option<number | string>;
+  "word-spacing"?: Option<number | string>;
+  "writing-mode"?: Option<number | string>;
+  x1?: Option<number | string>;
+  x2?: Option<number | string>;
+  x?: Option<number | string>;
+  xChannelSelector?: Option<string>;
+  "x-height"?: Option<number | string>;
+  "xlink:actuate"?: Option<string>;
+  "xlink:arcrole"?: Option<string>;
+  "xlink:href"?: Option<string>;
+  "xlink:role"?: Option<string>;
+  "xlink:show"?: Option<string>;
+  "xlink:title"?: Option<string>;
+  "xlink:type"?: Option<string>;
+  "xml:base"?: Option<string>;
+  "xml:lang"?: Option<string>;
+  xmlns?: Option<string>;
+  "xmlns-xlink"?: Option<string>;
+  "xml-space"?: Option<string>;
+  y1?: Option<number | string>;
+  y2?: Option<number | string>;
+  y?: Option<number | string>;
+  yChannelSelector?: Option<string>;
+  z?: Option<number | string>;
+  zoomAndPan?: Option<string>;
 }
 
 export interface HTMLAttributes<T> extends AriaAttributes, Partial<DOMAttributes<T>> {
-  $ref?: T | null,
-  $refFn?: (t: T) => void,
+  $ref?: Option<T>,
+  $refFn?: Option<(t: T) => void>,
   // Standard HTML Attributes
-  accesskey?: string | undefined;
-  autofocus?: boolean | undefined;
-  class?: ReactiveAttr;
-  contenteditable?: BoolAttr | "inherit" | "plaintext-only" | undefined;
-  contextMenu?: string | undefined;
-  dir?: string | undefined;
-  draggable?: BoolAttr | undefined;
-  hidden?: boolean | undefined;
-  id?: string | undefined;
-  lang?: string | undefined;
-  nonce?: string | undefined;
-  slot?: string | undefined;
-  spellcheck?: BoolAttr | undefined;
-  style?: CSSProperties | undefined;
-  tabindex?: number | undefined;
-  title?: string | undefined;
-  translate?: "yes" | "no" | undefined;
+  accesskey?: Option<string>;
+  autofocus?: Option<boolean>;
+  class?: Option<ReactiveAttr>;
+  contenteditable?: Option<BoolAttr | "inherit" | "plaintext-only">;
+  contextMenu?: Option<string>;
+  dir?: Option<string>;
+  draggable?: Option<BoolAttr>;
+  hidden?: Option<boolean>;
+  id?: Option<string>;
+  lang?: Option<string>;
+  nonce?: Option<string>;
+  slot?: Option<string>;
+  spellcheck?: Option<BoolAttr>;
+  style?: Option<CSSProperties>;
+  tabindex?: Option<number>;
+  title?: Option<string>;
+  translate?: Option<"yes" | "no">;
 
   // Unknown
-  radiogroup?: string | undefined; // <command>, <menuitem>
+  radiogroup?: Option<string>; // <command>, <menuitem>
 
   // WAI-ARIA
-  role?: AriaRole | undefined;
+  role?: Option<AriaRole>;
 
   // RDFa Attributes
-  about?: string | undefined;
-  content?: string | undefined;
-  datatype?: string | undefined;
-  inlist?: any;
-  prefix?: string | undefined;
-  property?: string | undefined;
-  rel?: string | undefined;
-  resource?: string | undefined;
-  rev?: string | undefined;
-  typeof?: string | undefined;
-  vocab?: string | undefined;
+  about?: Option<string>;
+  content?: Option<string>;
+  datatype?: Option<string>;
+  inlist?: Option<any>;
+  prefix?: Option<string>;
+  property?: Option<string>;
+  rel?: Option<string>;
+  resource?: Option<string>;
+  rev?: Option<string>;
+  typeof?: Option<string>;
+  vocab?: Option<string>;
 
   // Non-standard Attributes
-  autocapitalize?: string | undefined;
-  autocorrect?: string | undefined;
-  autosave?: string | undefined;
-  color?: string | undefined;
-  itemprop?: string | undefined;
-  itemscope?: boolean | undefined;
-  itemtype?: string | undefined;
-  itemid?: string | undefined;
-  itemref?: string | undefined;
-  results?: number | undefined;
-  security?: string | undefined;
-  unselectable?: "on" | "off" | undefined;
+  autocapitalize?: Option<string>;
+  autocorrect?: Option<string>;
+  autosave?: Option<string>;
+  color?: Option<string>;
+  itemprop?: Option<string>;
+  itemscope?: Option<boolean>;
+  itemtype?: Option<string>;
+  itemid?: Option<string>;
+  itemref?: Option<string>;
+  results?: Option<number>;
+  security?: Option<string>;
+  unselectable?: Option<"on" | "off">;
 
   // Living Standard
   /**
    * Hints at the type of data that might be entered by the user while editing the element or its contents
    * @see {@link https://html.spec.whatwg.org/multipage/interaction.html#input-modalities:-the-inputmode-attribute}
    */
-  inputmode?: "none" | "text" | "tel" | "url" | "email" | "numeric" | "decimal" | "search" | undefined;
+  inputmode?: Option<"none" | "text" | "tel" | "url" | "email" | "numeric" | "decimal" | "search">;
   /**
    * Specify that a standard HTML element should behave like a defined custom built-in element
    * @see {@link https://html.spec.whatwg.org/multipage/custom-elements.html#attr-is}
    */
-  is?: string | undefined;
+  is?: Option<string>;
 }
 
 export type HTMLElementAttributeMap = {
