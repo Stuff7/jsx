@@ -238,14 +238,7 @@ impl<'a> JsxTemplate<'a> {
     Ok((s, f))
   }
 
-  pub(super) fn replace_slot(
-    &self,
-    elem_vars: &mut String,
-    elem_setup: &mut String,
-    var: &str,
-    state: &mut GlobalState,
-    node: Option<&Node>,
-  ) -> Result<(), ParserError> {
+  pub(super) fn replace_slot(&self, elem_setup: &mut String, var: &str, state: &mut GlobalState, node: Option<&Node>) -> Result<(), ParserError> {
     let name = self
       .props
       .iter()
@@ -265,6 +258,7 @@ impl<'a> JsxTemplate<'a> {
       .unwrap_or("default");
 
     state.imports.insert("insertChild");
+    // by using `arguments` here <slot> will only work on components defined as `function()`
     writeln!(elem_setup, "{VAR_PREF}insertChild({var}, arguments[1]?.[\"{name}\"]?.());")?;
 
     Ok(())
@@ -289,7 +283,7 @@ impl<'a> JsxTemplate<'a> {
     let mut elem_setup = String::new();
 
     if self.tag == "slot" {
-      self.replace_slot(&mut elem_vars, &mut elem_setup, &var, state, None)?;
+      self.replace_slot(&mut elem_setup, &var, state, None)?;
     }
 
     if (self.is_root || state.is_component_child) && !state.parsing_special_root {
@@ -457,7 +451,7 @@ impl<'a> JsxTemplate<'a> {
             writeln!(elem_setup, "{slots};\n{VAR_PREF}insertChild({var}, {call});")?;
           }
           else if elem.tag == "slot" {
-            elem.replace_slot(&mut elem_vars, &mut elem_setup, &var, state, Some(&child.node))?;
+            elem.replace_slot(&mut elem_setup, &var, state, Some(&child.node))?;
           }
           else if let Some(cond) = &elem.conditional {
             state.imports.insert("conditionalRender");
