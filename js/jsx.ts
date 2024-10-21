@@ -161,7 +161,7 @@ export function setAttribute(node: Element, attr: string, value: unknown) {
 export function trackAttribute(node: Element, attr: string, value: () => unknown) {
   let running: Running<unknown>;
 
-  if (attr === "checked") {
+  if (attr === "value" || attr === "checked") {
     running = watch(() => {
       node[attr] = value();
     });
