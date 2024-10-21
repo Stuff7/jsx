@@ -122,7 +122,7 @@ export function conditionalRender(
 
   anchor.addEventListener("destroy", () => {
     if (node) {
-      node.dispatchEvent(new CustomEvent("destroy"));
+      destroyNode(node);
     }
     else {
       cleanup(running);
@@ -259,7 +259,7 @@ export function createTransition(
   let t: Element;
   anchor.addEventListener("destroy", () => {
     if (t) {
-      t.dispatchEvent(new CustomEvent("destroy"));
+      destroyNode(t);
     }
     else {
       cleanup(running);
