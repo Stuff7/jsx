@@ -100,7 +100,7 @@ JSX is a lightweight library that harnesses TypeScript's `jsxFactory` compiler o
   document.body.append(
     <p>
       You can append <strong>JSX</strong> directly here 
-      as it returns regular a HTMLElement 
+      as it returns a regular HTMLElement 
       <em>No need to create a function</em>
     </p>
   );
