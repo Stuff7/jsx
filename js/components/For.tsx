@@ -1,3 +1,4 @@
+import { destroyNode } from "~/jsx";
 import { isReactiveObject, reactive, ref, watch } from "~/signals";
 import { createElementPosition, InsertNodeFn } from "~/utils";
 
@@ -86,7 +87,7 @@ export default function For<T>(props: ForProps<T>): JSX.Element {
     if (props.each.length < length) {
       if (refs[length - 1] !== undefined) { return }
       for (let i = length - 1; i >= props.each.length; i--) {
-        list[i].remove();
+        destroyNode(list[i]);
       }
       length = refs.length = list.length = props.each.length;
     }
@@ -111,6 +112,9 @@ export default function For<T>(props: ForProps<T>): JSX.Element {
       }
 
       length = refs.length = list.length = props.each.length;
+    }
+    else if (props.each.length < length) {
+      removeNode();
     }
   });
 

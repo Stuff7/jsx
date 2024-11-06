@@ -2,6 +2,11 @@ export function reverseForEach<T>(arr: T[], cb: (node: T) => boolean | void) {
   arr.findLast(cb);
 }
 
+export function swapRemove<T>(a: T[], i: number) {
+  a[i] = a[a.length - 1];
+  a.length--;
+}
+
 export function swap<T>(arr: T[], idx1: number, idx2: number) {
   [arr[idx1], arr[idx2]] = [arr[idx2], arr[idx1]];
 }
@@ -58,6 +63,24 @@ export function deepEq<A extends object, B extends object>(a: A | B, b: B | A): 
   }
 
   return true;
+}
+
+export function iterChildrenDeep<T extends Node>(node: T, fn: (node: T) => void) {
+  if (node.nodeType === node.ELEMENT_NODE) {
+    for (const c of (node as unknown as Element).getElementsByTagName("*")) {
+      fn(c as unknown as T);
+    }
+  }
+
+  fn(node);
+}
+
+export function iterChildNodesDeep(node: Node, fn: (node: ChildNode) => void) {
+  fn(node as ChildNode);
+  for (const n of node.childNodes) {
+    iterChildNodesDeep(n, fn);
+  }
+  (node as ChildNode).remove();
 }
 
 export type ElementPosition = {

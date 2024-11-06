@@ -1,6 +1,7 @@
 /target
 /logs
 /dist
+/build
 /sample
 
 /pkg

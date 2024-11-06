@@ -1,8 +1,6 @@
 {
   "compilerOptions": {
-    "jsx": "react",
-    "jsxFactory": "jsx",
-    "jsxFragmentFactory": "Fragment"
+    "jsx": "preserve",
   },
   "files": ["./dist/types/global.d.ts"],
 }

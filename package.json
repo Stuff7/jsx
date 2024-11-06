@@ -33,7 +33,7 @@
   },
   "scripts": {
     "build": "./build.sh",
-    "sample": "esbuild js/sample/index.tsx --bundle --sourcemap --jsx=automatic --outdir=sample && target/release/jsx sample",
+    "sample": "target/release/jsx js/sample -import '~/jsx' -outdir build && esbuild build/index.tsx --bundle --sourcemap --minify --outdir=sample",
     "pack": "npm pack --pack-destination dist",
     "signals": "esbuild js/signals.ts --bundle --outdir=logs",
     "tsc": "tsc"

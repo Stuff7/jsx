@@ -1,4 +1,4 @@
-import jsx, { ref, watchOnly } from "~/jsx";
+import { ref, watchOnly } from "~/jsx";
 import For from "~/components/For";
 
 type Animal = {
@@ -68,7 +68,10 @@ const [index, setIndex] = ref(0);
 document.head.append(<style>{style()}</style>);
 document.body.append(
   <main>
-    <input bind:value={[nameFilter, setNameFilter]} on:input={filterByName} />
+    <input on:input={e => {
+      setNameFilter(e.currentTarget.value);
+      filterByName();
+    }} />
     <For each={filtered()} do={(animal, i) => (
       <div class:row on:click={() => setIndex(i)} >
         <strong>{i}</strong>

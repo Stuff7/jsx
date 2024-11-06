@@ -17,9 +17,7 @@
     "declaration": true,
     "emitDeclarationOnly": true,
 
-    "jsx": "react",
-    "jsxFactory": "jsx",
-    "jsxFragmentFactory": "Fragment",
+    "jsx": "preserve",
 
     "paths": {
       "~/*": ["./js/*"],

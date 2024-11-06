@@ -1,3 +1,4 @@
+import { destroyNode } from "~/jsx";
 import { watch } from "~/signals";
 
 type PortalProps = {
@@ -20,9 +21,19 @@ export default function Portal(props: PortalProps, slots: JSX.Slots) {
     return props.$ref;
   };
 
-  watch(() => {
-    parent().append(...slots.default);
+  const anchor = document.createComment("");
+
+  const children = slots.default?.();
+  queueMicrotask(() => {
+    anchor.addEventListener("destroy", () => {
+      children.forEach(destroyNode);
+      anchor.remove();
+    });
   });
 
-  return [] as unknown as JSX.Element;
+  watch(() => {
+    parent().append(...children);
+  });
+
+  return anchor as unknown as JSX.Element;
 }
