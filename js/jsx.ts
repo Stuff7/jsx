@@ -137,6 +137,7 @@ export function conditionalRender(
       cleanup(running);
     }
   });
+
   const create = () => {
     node = createNode();
     applyToNodes(node, n => {
@@ -151,7 +152,13 @@ export function conditionalRender(
 
   const running = watchFn(condition, () => {
     if (condition()) {
-      applyToNodes(node || (node = create()), n => anchor.replaceWith(n));
+      const n = node || (node = create());
+      if (n instanceof Array) {
+        anchor.replaceWith(...n);
+      }
+      else {
+        anchor.replaceWith(n);
+      }
     }
     else if (node) {
       applyToNodes(node, n => n.replaceWith(anchor));
