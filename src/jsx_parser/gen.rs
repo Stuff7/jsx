@@ -459,7 +459,12 @@ impl<'a> JsxTemplate<'a> {
             writeln!(
               elem_setup,
               "{VAR_PREF}conditionalRender({var}, {}, {});",
-              &parts.create_fn[..parts.create_fn.len() - 2],
+              if parts.create_fn.ends_with(')') {
+                &parts.create_fn[..parts.create_fn.len() - 2]
+              }
+              else {
+                &parts.create_fn
+              },
               wrap_reactive_value(cond.kind, cond.value.unwrap_or("true"))
             )?;
           }
