@@ -113,16 +113,25 @@ export function addLocalEvent(
   }
 }
 
+function applyToNodes(node: Element | Element[], action: (n: Element) => void) {
+  if (node instanceof Array) {
+    node.forEach(action);
+  }
+  else {
+    action(node);
+  }
+}
+
 export function conditionalRender(
   anchor: Comment,
-  createNode: () => Element,
+  createNode: () => Element | Element[],
   condition: () => boolean,
 ) {
-  let node: Element;
+  let node: Element | Element[];
 
   anchor.addEventListener("destroy", () => {
     if (node) {
-      destroyNode(node);
+      applyToNodes(node, destroyNode);
     }
     else {
       cleanup(running);
@@ -130,19 +139,22 @@ export function conditionalRender(
   });
   const create = () => {
     node = createNode();
-    node.addEventListener("destroy", () => {
-      cleanup(running);
-      anchor.remove();
+    applyToNodes(node, n => {
+      n.addEventListener("destroy", () => {
+        cleanup(running);
+        anchor.remove();
+      });
     });
+
     return node;
   };
 
   const running = watchFn(condition, () => {
     if (condition()) {
-      anchor.replaceWith(node || (node = create()));
+      applyToNodes(node || (node = create()), n => anchor.replaceWith(n));
     }
     else if (node) {
-      node.replaceWith(anchor);
+      applyToNodes(node, n => n.replaceWith(anchor));
     }
   });
 

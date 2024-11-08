@@ -456,17 +456,22 @@ impl<'a> JsxTemplate<'a> {
           else if let Some(cond) = &elem.conditional {
             state.imports.insert("conditionalRender");
             let parts = elem.parts(templates, state)?;
-            writeln!(
-              elem_setup,
-              "{VAR_PREF}conditionalRender({var}, {}, {});",
-              if parts.create_fn.ends_with(')') {
-                &parts.create_fn[..parts.create_fn.len() - 2]
-              }
-              else {
-                &parts.create_fn
-              },
-              wrap_reactive_value(cond.kind, cond.value.unwrap_or("true"))
-            )?;
+            if parts.create_fn.trim_end().ends_with(']') {
+              writeln!(
+                elem_setup,
+                "{VAR_PREF}conditionalRender({var}, () => ({}), {});",
+                &parts.create_fn,
+                wrap_reactive_value(cond.kind, cond.value.unwrap_or("true"))
+              )?;
+            }
+            else {
+              writeln!(
+                elem_setup,
+                "{VAR_PREF}conditionalRender({var}, {}, {});",
+                &parts.create_fn[..parts.create_fn.len() - 2],
+                wrap_reactive_value(cond.kind, cond.value.unwrap_or("true"))
+              )?;
+            }
           }
           else if let Some((name, cond)) = &elem.transition {
             state.imports.insert("createTransition");
