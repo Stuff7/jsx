@@ -303,6 +303,7 @@ interface InputHTMLAttributes<T> extends HTMLAttributes<T> {
   step?: Option<number | string>;
   type?: Option<HTMLInputTypeAttribute>;
   value?: Option<string | readonly string[] | number>;
+  webkitdirectory?: Option<boolean>;
   width?: Option<number | string>;
 }
 
