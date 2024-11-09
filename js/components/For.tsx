@@ -24,7 +24,7 @@ export default function For<T>(props: ForProps<T>): JSX.Element {
   let length = props.each.length;
 
   queueMicrotask(() => {
-    if (!anchor.isConnected) {
+    if (!anchor.isConnected && !anchor.parentElement) {
       console.warn("<For> failed to mount");
     }
     initialPosition.setFromElement(anchor);
