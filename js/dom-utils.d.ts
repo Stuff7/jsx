@@ -16,6 +16,7 @@ declare global {
     "onmount": Option<(this: GlobalEventHandlers, ev: Event) => void>,
     "onunmount": Option<(this: GlobalEventHandlers, ev: Event) => void>,
     "ondestroy": Option<(this: GlobalEventHandlers, ev: Event) => void>,
+    "onfullscreenchange": Option<(this: GlobalEventHandlers, ev: Event) => void>,
   }
 }
 
