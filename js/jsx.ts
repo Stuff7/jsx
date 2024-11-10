@@ -26,7 +26,7 @@ type GlobalEvent = {
 export function createGlobalEvent(evName: EventName) {
   const listeners = [] as GlobalEvent[];
 
-  (evName === "resize" ? window : document).addEventListener(evName, (e) => {
+  (evName === "resize" || evName === "hashchange" ? window : document).addEventListener(evName, (e) => {
     for (let i = listeners.length - 1; i >= 0; i--) {
       const l = listeners[i];
       if (!l.target.isConnected) { continue }

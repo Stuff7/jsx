@@ -9,7 +9,7 @@ export type CSSProperties = Properties;
 export type RemovePrefix<T, Prefix extends string> = T extends `${Prefix}${infer S}` ? S : T;
 export type RemoveSuffix<T, Suffix extends string> = T extends `${infer S}${Suffix}` ? S : T;
 export type OnEventName = Exclude<keyof GlobalEventHandlers, `${string}EventListener`>;
-export type EventName = RemovePrefix<OnEventName, "on">;
+export type EventName = RemovePrefix<OnEventName, "on"> | keyof WindowEventMap;
 
 declare global {
   interface GlobalEventHandlers {
