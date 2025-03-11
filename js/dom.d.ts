@@ -860,7 +860,7 @@ type DOMAttributes<T> = SpecialProps &
     innerHTML?: Option<string>;
   };
 
-interface SVGAttributes<T> extends AriaAttributes, DOMAttributes<T> {
+interface SVGAttributes<T> extends AriaAttributes, Partial<DOMAttributes<T>> {
   // Attributes which are also defined in HTMLAttributes
   class?: Option<ReactiveAttr>;
   color?: Option<string>;
