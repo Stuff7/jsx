@@ -1,6 +1,11 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { BoolAttr, ReactiveAttr } from "./signals";
-import { Option, Binders, CSSProperties, SpecialProps, EventHandlers } from "./dom-utils";
+import type { BoolAttr, ReactiveAttr } from "./signals";
+import type {
+  Option,
+  Binders,
+  CSSProperties,
+  SpecialProps,
+  EventHandlers,
+} from "./dom-utils";
 
 type HTMLAttributeAnchorTarget =
   | "_self"
@@ -19,8 +24,10 @@ type HTMLAttributeReferrerPolicy =
   | "strict-origin"
   | "strict-origin-when-cross-origin"
   | "unsafe-url";
+//
 
 interface AnchorHTMLAttributes<T> extends HTMLAttributes<T> {
+  // biome-ignore lint/suspicious/noExplicitAny:
   download?: Option<any>;
   href?: Option<string>;
   hreflang?: Option<string>;
@@ -36,6 +43,7 @@ interface AudioHTMLAttributes<T> extends MediaHTMLAttributes<T> { }
 interface AreaHTMLAttributes<T> extends HTMLAttributes<T> {
   alt?: Option<string>;
   coords?: Option<string>;
+  // biome-ignore lint/suspicious/noExplicitAny:
   download?: Option<any>;
   href?: Option<string>;
   hreflang?: Option<string>;
@@ -59,9 +67,7 @@ interface ButtonHTMLAttributes<T> extends HTMLAttributes<T> {
   form?: Option<string>;
   formaction?:
   | string
-  | NonNullable<unknown>[
-  keyof NonNullable<unknown>
-  ]
+  | NonNullable<unknown>[keyof NonNullable<unknown>]
   | undefined;
   formenctype?: Option<string>;
   formmethod?: Option<string>;
@@ -122,9 +128,7 @@ interface FormHTMLAttributes<T> extends HTMLAttributes<T> {
   action?:
   | string
   | undefined
-  | NonNullable<unknown>[
-  keyof NonNullable<unknown>
-  ];
+  | NonNullable<unknown>[keyof NonNullable<unknown>];
   autocomplete?: Option<string>;
   enctype?: Option<string>;
   method?: Option<string>;
@@ -260,14 +264,16 @@ type AutoFillNormalField =
   | "username";
 type OptionalPrefixToken<T extends string> = `${T} ` | "";
 type OptionalPostfixToken<T extends string> = ` ${T}` | "";
-type AutoFillField = AutoFillNormalField | `${OptionalPrefixToken<AutoFillContactKind>}${AutoFillContactField}`;
+type AutoFillField =
+  | AutoFillNormalField
+  | `${OptionalPrefixToken<AutoFillContactKind>}${AutoFillContactField}`;
 type AutoFillSection = `section-${string}`;
 type AutoFill =
   | AutoFillBase
-  | `${OptionalPrefixToken<AutoFillSection>}${OptionalPrefixToken<
-    AutoFillAddressKind
-  >}${AutoFillField}${OptionalPostfixToken<AutoFillCredentialField>}`;
-type HTMLInputAutoCompleteAttribute = AutoFill | (string & NonNullable<unknown>);
+  | `${OptionalPrefixToken<AutoFillSection>}${OptionalPrefixToken<AutoFillAddressKind>}${AutoFillField}${OptionalPostfixToken<AutoFillCredentialField>}`;
+type HTMLInputAutoCompleteAttribute =
+  | AutoFill
+  | (string & NonNullable<unknown>);
 
 interface InputHTMLAttributes<T> extends HTMLAttributes<T> {
   accept?: Option<string>;
@@ -276,12 +282,11 @@ interface InputHTMLAttributes<T> extends HTMLAttributes<T> {
   capture?: Option<boolean | "user" | "environment">; // https://www.w3.org/TR/html-media-capture/#the-capture-attribute
   checked?: Option<boolean>;
   disabled?: Option<boolean>;
-  enterkeyhint?: Option<"enter" | "done" | "go" | "next" | "previous" | "search" | "send">;
+  enterkeyhint?: Option<
+    "enter" | "done" | "go" | "next" | "previous" | "search" | "send"
+  >;
   form?: Option<string>;
-  formaction?:
-  | string
-  | NonNullable<unknown>
-  | undefined;
+  formaction?: string | NonNullable<unknown> | undefined;
   formenctype?: Option<string>;
   formmethod?: Option<string>;
   formnovalidate?: Option<boolean>;
@@ -600,7 +605,9 @@ interface AriaAttributes {
    */
   "aria-controls"?: Option<string>;
   /** Indicates the element that represents the current item within a container or set of related elements. */
-  "aria-current"?: Option<boolean | "false" | "true" | "page" | "step" | "location" | "date" | "time">;
+  "aria-current"?: Option<
+    boolean | "false" | "true" | "page" | "step" | "location" | "date" | "time"
+  >;
   /**
    * Identifies the element (or elements) that describes the object.
    * @see aria-labelledby
@@ -625,7 +632,9 @@ interface AriaAttributes {
    * Indicates what functions can be performed when a dragged object is released on the drop target.
    * @deprecated in ARIA 1.1
    */
-  "aria-dropeffect"?: Option<"none" | "copy" | "execute" | "link" | "move" | "popup">;
+  "aria-dropeffect"?: Option<
+    "none" | "copy" | "execute" | "link" | "move" | "popup"
+  >;
   /**
    * Identifies the element that provides an error message for the object.
    * @see aria-invalid @see aria-describedby.
@@ -644,7 +653,9 @@ interface AriaAttributes {
    */
   "aria-grabbed"?: Option<BoolAttr>;
   /** Indicates the availability and type of interactive popup element, such as menu or dialog, that can be triggered by an element. */
-  "aria-haspopup"?: Option<boolean | "false" | "true" | "menu" | "listbox" | "tree" | "grid" | "dialog">;
+  "aria-haspopup"?: Option<
+    boolean | "false" | "true" | "menu" | "listbox" | "tree" | "grid" | "dialog"
+  >;
   /**
    * Indicates whether the element is exposed to an accessibility API.
    * @see aria-disabled.
@@ -709,7 +720,8 @@ interface AriaAttributes {
    * Indicates what notifications the user agent will trigger when the accessibility tree within a live region is modified.
    * @see aria-atomic.
    */
-  "aria-relevant"?: Option<"additions"
+  "aria-relevant"?: Option<
+    | "additions"
     | "additions removals"
     | "additions text"
     | "all"
@@ -718,7 +730,8 @@ interface AriaAttributes {
     | "removals text"
     | "text"
     | "text additions"
-    | "text removals">;
+    | "text removals"
+  >;
   /** Indicates that user input is required on the element before a form may be submitted. */
   "aria-required"?: Option<BoolAttr>;
   /** Defines a human-readable, author-localized description for the role of an element. */
@@ -841,10 +854,11 @@ type AriaRole =
   | "treeitem"
   | (string & NonNullable<unknown>);
 
-type DOMAttributes<T> = SpecialProps & EventHandlers<T> & {
-  children?: Option<Node | Node[]>;
-  innerHTML?: Option<string>;
-};
+type DOMAttributes<T> = SpecialProps &
+  EventHandlers<T> & {
+    children?: Option<Node | Node[]>;
+    innerHTML?: Option<string>;
+  };
 
 interface SVGAttributes<T> extends AriaAttributes, DOMAttributes<T> {
   // Attributes which are also defined in HTMLAttributes
@@ -872,7 +886,8 @@ interface SVGAttributes<T> extends AriaAttributes, DOMAttributes<T> {
   "accent-height"?: Option<number | string>;
   accumulate?: Option<"none" | "sum">;
   additive?: Option<"replace" | "sum">;
-  "alignment-baseline"?: Option<"auto"
+  "alignment-baseline"?: Option<
+    | "auto"
     | "baseline"
     | "before-edge"
     | "text-before-edge"
@@ -884,7 +899,8 @@ interface SVGAttributes<T> extends AriaAttributes, DOMAttributes<T> {
     | "alphabetic"
     | "hanging"
     | "mathematical"
-    | "inherit">;
+    | "inherit"
+  >;
   alphabetic?: Option<number | string>;
   amplitude?: Option<number | string>;
   "arabic-form"?: Option<"initial" | "medial" | "terminal" | "isolated">;
@@ -905,7 +921,9 @@ interface SVGAttributes<T> extends AriaAttributes, DOMAttributes<T> {
   "clip-path"?: Option<string>;
   "clip-rule"?: Option<number | string>;
   "color-interpolation"?: Option<number | string>;
-  "color-interpolation-filters"?: Option<"auto" | "sRGB" | "linearRGB" | "inherit">;
+  "color-interpolation-filters"?: Option<
+    "auto" | "sRGB" | "linearRGB" | "inherit"
+  >;
   "color-profile"?: Option<number | string>;
   "color-rendering"?: Option<number | string>;
   "content-script-type"?: Option<number | string>;
@@ -1120,9 +1138,11 @@ interface SVGAttributes<T> extends AriaAttributes, DOMAttributes<T> {
   zoomAndPan?: Option<string>;
 }
 
-export interface HTMLAttributes<T> extends AriaAttributes, Partial<DOMAttributes<T>> {
-  $ref?: Option<T>,
-  $refFn?: Option<(t: T) => void>,
+export interface HTMLAttributes<T>
+  extends AriaAttributes,
+  Partial<DOMAttributes<T>> {
+  $ref?: Option<T>;
+  $refFn?: Option<(t: T) => void>;
   // Standard HTML Attributes
   accesskey?: Option<string>;
   autofocus?: Option<boolean>;
@@ -1152,6 +1172,7 @@ export interface HTMLAttributes<T> extends AriaAttributes, Partial<DOMAttributes
   about?: Option<string>;
   content?: Option<string>;
   datatype?: Option<string>;
+  // biome-ignore lint/suspicious/noExplicitAny:
   inlist?: Option<any>;
   prefix?: Option<string>;
   property?: Option<string>;
@@ -1180,7 +1201,9 @@ export interface HTMLAttributes<T> extends AriaAttributes, Partial<DOMAttributes
    * Hints at the type of data that might be entered by the user while editing the element or its contents
    * @see {@link https://html.spec.whatwg.org/multipage/interaction.html#input-modalities:-the-inputmode-attribute}
    */
-  inputmode?: Option<"none" | "text" | "tel" | "url" | "email" | "numeric" | "decimal" | "search">;
+  inputmode?: Option<
+    "none" | "text" | "tel" | "url" | "email" | "numeric" | "decimal" | "search"
+  >;
   /**
    * Specify that a standard HTML element should behave like a defined custom built-in element
    * @see {@link https://html.spec.whatwg.org/multipage/custom-elements.html#attr-is}
@@ -1305,4 +1328,58 @@ export type HTMLElementAttributeMap = {
   var: Binders<HTMLAttributes<HTMLElement>>;
   video: Binders<VideoHTMLAttributes<HTMLVideoElement>>;
   wbr: Binders<HTMLAttributes<HTMLElement>>;
+  svg: Binders<SVGAttributes<SVGElement>>;
+  path: Binders<SVGAttributes<SVGPathElement>>;
+  g: Binders<SVGAttributes<SVGGElement>>;
+  circle: Binders<SVGAttributes<SVGCircleElement>>;
+  rect: Binders<SVGAttributes<SVGRectElement>>;
+  line: Binders<SVGAttributes<SVGLineElement>>;
+  ellipse: Binders<SVGAttributes<SVGEllipseElement>>;
+  polygon: Binders<SVGAttributes<SVGPolygonElement>>;
+  polyline: Binders<SVGAttributes<SVGPolylineElement>>;
+  text: Binders<SVGAttributes<SVGTextElement>>;
+  tspan: Binders<SVGAttributes<SVGTSpanElement>>;
+  textPath: Binders<SVGAttributes<SVGTextPathElement>>;
+  defs: Binders<SVGAttributes<SVGDefsElement>>;
+  clipPath: Binders<SVGAttributes<SVGClipPathElement>>;
+  mask: Binders<SVGAttributes<SVGMaskElement>>;
+  use: Binders<SVGAttributes<SVGUseElement>>;
+  symbol: Binders<SVGAttributes<SVGSymbolElement>>;
+  marker: Binders<SVGAttributes<SVGMarkerElement>>;
+  pattern: Binders<SVGAttributes<SVGPatternElement>>;
+  foreignObject: Binders<SVGAttributes<SVGForeignObjectElement>>;
+  filter: Binders<SVGAttributes<SVGFilterElement>>;
+  feGaussianBlur: Binders<SVGAttributes<SVGFEGaussianBlurElement>>;
+  feOffset: Binders<SVGAttributes<SVGFEOffsetElement>>;
+  feBlend: Binders<SVGAttributes<SVGFEBlendElement>>;
+  feColorMatrix: Binders<SVGAttributes<SVGFEColorMatrixElement>>;
+  feComponentTransfer: Binders<SVGAttributes<SVGFEComponentTransferElement>>;
+  feComposite: Binders<SVGAttributes<SVGFECompositeElement>>;
+  feConvolveMatrix: Binders<SVGAttributes<SVGFEConvolveMatrixElement>>;
+  feDiffuseLighting: Binders<SVGAttributes<SVGFEDiffuseLightingElement>>;
+  feDisplacementMap: Binders<SVGAttributes<SVGFEDisplacementMapElement>>;
+  feDistantLight: Binders<SVGAttributes<SVGFEDistantLightElement>>;
+  feFlood: Binders<SVGAttributes<SVGFEFloodElement>>;
+  feFuncA: Binders<SVGAttributes<SVGFEFuncAElement>>;
+  feFuncB: Binders<SVGAttributes<SVGFEFuncBElement>>;
+  feFuncG: Binders<SVGAttributes<SVGFEFuncGElement>>;
+  feFuncR: Binders<SVGAttributes<SVGFEFuncRElement>>;
+  feMerge: Binders<SVGAttributes<SVGFEMergeElement>>;
+  feMergeNode: Binders<SVGAttributes<SVGFEMergeNodeElement>>;
+  feMorphology: Binders<SVGAttributes<SVGFEMorphologyElement>>;
+  feSpecularLighting: Binders<SVGAttributes<SVGFESpecularLightingElement>>;
+  feTile: Binders<SVGAttributes<SVGFETileElement>>;
+  feTurbulence: Binders<SVGAttributes<SVGFETurbulenceElement>>;
+  feDropShadow: Binders<SVGAttributes<SVGFEDropShadowElement>>;
+  feImage: Binders<SVGAttributes<SVGFEImageElement>>;
+  fePointLight: Binders<SVGAttributes<SVGFEPointLightElement>>;
+  feSpotLight: Binders<SVGAttributes<SVGFESpotLightElement>>;
+  desc: Binders<SVGAttributes<SVGDescElement>>;
+  metadata: Binders<SVGAttributes<SVGMetadataElement>>;
+  view: Binders<SVGAttributes<SVGViewElement>>;
+  animate: Binders<SVGAttributes<SVGAnimateElement>>;
+  animateTransform: Binders<SVGAttributes<SVGAnimateTransformElement>>;
+  animateMotion: Binders<SVGAttributes<SVGAnimateMotionElement>>;
+  set: Binders<SVGAttributes<SVGSetElement>>;
+  mpath: Binders<SVGAttributes<SVGMPathElement>>;
 };
