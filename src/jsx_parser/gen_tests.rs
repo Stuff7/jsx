@@ -1,14 +1,16 @@
 #[cfg(test)]
 mod tests {
-  use crate::jsx_parser::{utils::merge_jsx_text, JsxParser, JsxTemplate, ParserError};
+  use crate::jsx_parser::{utils::merge_jsx_text, JsParser, JsxTemplate, ParserError, Q_JSX_TEMPLATE};
 
   macro_rules! parse_templates {
     (let $name: ident = $src: expr) => {
       let source = $src;
-      let mut parser = JsxParser::new().expect("JsxParser should be created");
+      let mut parser = JsParser::from_query(Q_JSX_TEMPLATE).expect("JsParser should be created");
 
       let tree = parser.tree(source).expect("Tree should parse");
-      let matches = parser.parse(tree.root_node(), source).expect("Tree root node should parse");
+      let matches = parser
+        .parse(tree.root_node(), source)
+        .expect("Tree root node should parse");
 
       let $name = matches
         .enumerate()
@@ -244,11 +246,17 @@ mod tests {
 
     let mut idx = 0;
     let text = merge_jsx_text(&templates[0].children, &mut idx, true).expect("Text should parse");
-    assert_eq!(text, "\" Unicode text with emojis 😊 and non-ASCII ￼ 𝔸 characters: äöüß \"");
+    assert_eq!(
+      text,
+      "\" Unicode text with emojis 😊 and non-ASCII ￼ 𝔸 characters: äöüß \""
+    );
 
     let mut idx = 0;
     let text = merge_jsx_text(&templates[0].children, &mut idx, false).expect("Text should parse");
-    assert_eq!(text, " Unicode text with emojis 😊 and non-ASCII &#xFFFC; &#120120; characters: äöüß ");
+    assert_eq!(
+      text,
+      " Unicode text with emojis 😊 and non-ASCII &#xFFFC; &#120120; characters: äöüß "
+    );
   }
 
   #[test]
