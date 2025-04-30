@@ -1,35 +1,55 @@
-import { cleanup, Running, watch, watchFn } from "~/signals";
-import { EventName } from "./dom-utils";
+import { cleanup, type Running, watch, watchFn } from "~/signals";
+import type { EventName } from "./dom-utils";
 import { swapRemove, iterChildrenDeep, iterChildNodesDeep } from "./utils";
 
 export * from "~/signals";
 
-export function template(html: string) {
-  const createNode = () => {
+export function template(html: string): () => Node {
+  const needsXml = /<select|<ul|<table/i.test(html) && /<slot/i.test(html);
+
+  const createNode = (): Node => {
+    if (needsXml) {
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(
+        `<root>${html}</root>`,
+        "application/xml",
+      );
+      if (!xml.getElementsByTagName("parsererror").length) {
+        const imported = xml.documentElement.firstChild;
+        if (imported) return document.importNode(imported, true);
+      }
+      // fallback to template if XML failed
+    }
     const templ = document.createElement("template");
     templ.innerHTML = html;
-    return templ.content.firstChild!;
+    return templ.content.firstChild as Node;
   };
 
-  let node!: Node;
-  return () => (node || (node = createNode())).cloneNode(true);
+  let cached: Node | undefined;
+  // biome-ignore lint/suspicious/noAssignInExpressions:
+  return (): Node => (cached || (cached = createNode())).cloneNode(true);
 }
 
 type EventHandler = (e: Event) => void;
 
 type GlobalEvent = {
-  fn: EventHandler,
-  target: Element,
-  once?: boolean,
+  fn: EventHandler;
+  target: Element;
+  once?: boolean;
 };
 
 export function createGlobalEvent(evName: EventName) {
   const listeners = [] as GlobalEvent[];
 
-  (evName === "resize" || evName === "hashchange" ? window : document).addEventListener(evName, (e) => {
+  (evName === "resize" || evName === "hashchange"
+    ? window
+    : document
+  ).addEventListener(evName, (e) => {
     for (let i = listeners.length - 1; i >= 0; i--) {
       const l = listeners[i];
-      if (!l.target.isConnected) { continue }
+      if (!l.target.isConnected) {
+        continue;
+      }
       l.fn(e);
       if (l.once) {
         swapRemove(listeners, i);
@@ -41,12 +61,18 @@ export function createGlobalEvent(evName: EventName) {
 }
 
 export function destroyNode(node: Element) {
-  iterChildNodesDeep(node, t => t.dispatchEvent(new CustomEvent("destroy")));
+  iterChildNodesDeep(node, (t) => t.dispatchEvent(new CustomEvent("destroy")));
 }
 
-export function observeTree(observer: MutationObserver, target: Element, isMount: boolean) {
+export function observeTree(
+  observer: MutationObserver,
+  target: Element,
+  isMount: boolean,
+) {
   queueMicrotask(() => {
-    if (!target.parentNode) { return }
+    if (!target.parentNode) {
+      return;
+    }
     observer.observe(target.parentNode, { childList: true, subtree: true });
     if (isMount) {
       target.dispatchEvent(new CustomEvent("mount"));
@@ -57,16 +83,22 @@ export function observeTree(observer: MutationObserver, target: Element, isMount
 export function createMutationObserver() {
   return new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
-      if (mutation.type !== "childList") { return }
+      if (mutation.type !== "childList") {
+        return;
+      }
 
       for (const node of mutation.addedNodes) {
         queueMicrotask(() => {
-          iterChildrenDeep(node, node => node.dispatchEvent(new CustomEvent("mount")));
+          iterChildrenDeep(node, (node) =>
+            node.dispatchEvent(new CustomEvent("mount")),
+          );
         });
       }
       for (const node of mutation.removedNodes) {
         queueMicrotask(() => {
-          iterChildrenDeep(node, node => node.dispatchEvent(new CustomEvent("unmount")));
+          iterChildrenDeep(node, (node) =>
+            node.dispatchEvent(new CustomEvent("unmount")),
+          );
         });
       }
     });
@@ -84,15 +116,14 @@ export function addGlobalEvent(
       listeners.push({ fn: value[0], once: value[1].once, target });
       added = true;
     }
-  }
-  else if (value) {
+  } else if (value) {
     listeners.push({ fn: value, target });
     added = true;
   }
 
   if (added) {
     target.addEventListener("destroy", () => {
-      const i = listeners.findIndex(l => l.target === target);
+      const i = listeners.findIndex((l) => l.target === target);
       if (i !== -1) {
         swapRemove(listeners, i);
       }
@@ -107,8 +138,7 @@ export function addLocalEvent(
 ) {
   if (value instanceof Array) {
     target.addEventListener(evName, value[0], value[1]);
-  }
-  else {
+  } else {
     target.addEventListener(evName, value);
   }
 }
@@ -116,8 +146,7 @@ export function addLocalEvent(
 function applyToNodes(node: Element | Element[], action: (n: Element) => void) {
   if (node instanceof Array) {
     node.forEach(action);
-  }
-  else {
+  } else {
     action(node);
   }
 }
@@ -132,15 +161,14 @@ export function conditionalRender(
   anchor.addEventListener("destroy", () => {
     if (node) {
       applyToNodes(node, destroyNode);
-    }
-    else {
+    } else {
       cleanup(running);
     }
   });
 
   const create = () => {
     node = createNode();
-    applyToNodes(node, n => {
+    applyToNodes(node, (n) => {
       n.addEventListener("destroy", () => {
         cleanup(running);
         anchor.remove();
@@ -155,37 +183,37 @@ export function conditionalRender(
       const n = node || (node = create());
       if (n instanceof Array) {
         anchor.replaceWith(...n);
-      }
-      else {
+      } else {
         anchor.replaceWith(n);
       }
-    }
-    else if (node) {
-      applyToNodes(node, n => n.replaceWith(anchor));
+    } else if (node) {
+      applyToNodes(node, (n) => n.replaceWith(anchor));
     }
   });
 
-  return condition() ? (node! || (node = create())) : anchor;
+  return condition() ? node! || (node = create()) : anchor;
 }
 
 export function setAttribute(node: Element, attr: string, value: unknown) {
   if (value == null || value === false) {
     node.removeAttribute(attr);
-  }
-  else {
+  } else {
     node.setAttribute(attr, value as string);
   }
 }
 
-export function trackAttribute(node: Element, attr: string, value: () => unknown) {
+export function trackAttribute(
+  node: Element,
+  attr: string,
+  value: () => unknown,
+) {
   let running: Running<unknown>;
 
   if (attr === "value" || attr === "checked") {
     running = watch(() => {
       node[attr] = value();
     });
-  }
-  else {
+  } else {
     running = watch(() => {
       setAttribute(node, attr, value());
     });
@@ -194,12 +222,15 @@ export function trackAttribute(node: Element, attr: string, value: () => unknown
   node.addEventListener("destroy", () => cleanup(running));
 }
 
-export function trackClass(target: Element, className: string, value: () => boolean) {
+export function trackClass(
+  target: Element,
+  className: string,
+  value: () => boolean,
+) {
   const running = watch(() => {
     if (!value()) {
       target.classList.remove(className);
-    }
-    else {
+    } else {
       target.classList.add(className);
     }
   });
@@ -208,12 +239,15 @@ export function trackClass(target: Element, className: string, value: () => bool
 }
 
 type ToString = { toString(): string };
-export function trackCssProperty(target: HTMLElement, rule: string, value: (() => ToString) | ToString) {
+export function trackCssProperty(
+  target: HTMLElement,
+  rule: string,
+  value: (() => ToString) | ToString,
+) {
   if (typeof value === "function") {
     const running = watch(() => target.style.setProperty(rule, value()));
     target.addEventListener("destroy", () => cleanup(running));
-  }
-  else {
+  } else {
     target.style.setProperty(rule, value.toString());
   }
 }
@@ -225,18 +259,15 @@ export function insertChild(
   if (anchor instanceof HTMLSlotElement && !child) {
     anchor.replaceWith(...anchor.childNodes);
     return anchor.children;
-  }
-  else if (typeof child === "string" || typeof child === "number") {
+  } else if (typeof child === "string" || typeof child === "number") {
     const textNode = document.createTextNode("");
     textNode.textContent = child.toString();
     anchor.replaceWith(textNode);
     return textNode;
-  }
-  else if (child instanceof Node) {
+  } else if (child instanceof Node) {
     anchor.replaceWith(child);
     return child;
-  }
-  else if (child instanceof Array) {
+  } else if (child instanceof Array) {
     let next = anchor;
     let a = anchor;
     for (let i = 0; i < child.length; i++) {
@@ -248,19 +279,16 @@ export function insertChild(
       a = next;
     }
     return child;
-  }
-  else {
+  } else {
     const textNode = document.createTextNode("");
     anchor.replaceWith(textNode);
     const running = watch(() => {
       const c = child();
       if (typeof c === "string") {
         textNode.textContent = c;
-      }
-      else if (c != null) {
+      } else if (c != null) {
         textNode.textContent = c.toString();
-      }
-      else if (c == null) {
+      } else if (c == null) {
         textNode.textContent = "";
       }
     });
@@ -279,8 +307,7 @@ export function createTransition(
   anchor.addEventListener("destroy", () => {
     if (t) {
       destroyNode(t);
-    }
-    else {
+    } else {
       cleanup(running);
     }
   });
@@ -294,7 +321,7 @@ export function createTransition(
   const leaveTo = () => `${name}-leave-to`;
 
   function nextFrame() {
-    return new Promise(res => {
+    return new Promise((res) => {
       requestAnimationFrame(() => requestAnimationFrame(res));
     });
   }
@@ -316,7 +343,7 @@ export function createTransition(
 
     return t;
   };
-  const target = () => (t || (t = create()));
+  const target = () => t || (t = create());
   let firstRun = true;
   const running = watchFn(cond, async () => {
     if (firstRun && !cond()) {
@@ -326,20 +353,21 @@ export function createTransition(
     firstRun = false;
 
     if (target().classList.length) {
-      if (!cond() && (
-        target().classList.contains(enterFrom()) ||
-        target().classList.contains(enterActive()) ||
-        target().classList.contains(enterTo())
-      )) {
+      if (
+        !cond() &&
+        (target().classList.contains(enterFrom()) ||
+          target().classList.contains(enterActive()) ||
+          target().classList.contains(enterTo()))
+      ) {
         await nextFrame();
         removeClasses();
         target().replaceWith(anchor);
-      }
-      else if (cond() && (
-        target().classList.contains(leaveFrom()) ||
-        target().classList.contains(leaveTo()) ||
-        target().classList.contains(leaveActive())
-      )) {
+      } else if (
+        cond() &&
+        (target().classList.contains(leaveFrom()) ||
+          target().classList.contains(leaveTo()) ||
+          target().classList.contains(leaveActive()))
+      ) {
         await nextFrame();
         removeClasses();
         target().replaceWith(anchor);
@@ -347,7 +375,9 @@ export function createTransition(
     }
 
     if (cond()) {
-      if (target().isConnected) { return }
+      if (target().isConnected) {
+        return;
+      }
       target().classList.add(enterFrom());
       target().classList.add(enterActive());
 
@@ -356,8 +386,7 @@ export function createTransition(
 
       target().classList.remove(enterFrom());
       target().classList.add(enterTo());
-    }
-    else if (target().isConnected) {
+    } else if (target().isConnected) {
       target().classList.add(leaveFrom());
       target().classList.add(leaveActive());
 
